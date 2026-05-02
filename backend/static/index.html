@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>WAEX Tools Studio | Smart File Tools</title>
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <video autoplay muted loop playsinline class="background-video">
+    <source src="videos/background.mp4" type="video/mp4" />
+  </video>
+
+  <div class="video-overlay"></div>
+
+  <!-- Welcome Page -->
+  <section id="welcomePage" class="page welcome-page">
+    <div class="welcome-card">
+      <img src="images/waex-circle.png" alt="WAEX Tools Studio Logo" class="logo" />
+
+      <p class="eyebrow">WAEX TOOLS STUDIO</p>
+
+      <h1 class="hero-title">Smart tools for everyday productivity</h1>
+
+      <p class="welcome-text">
+        A clean workspace for background removal, document conversion, and more practical tools.
+      </p>
+
+      <div class="hero-badges">
+        <span class="hero-badge">Background Remover</span>
+        <span class="hero-badge">DOCX to PDF</span>
+        <span class="hero-badge">More tools coming soon</span>
+      </div>
+
+      <div class="hero-actions">
+        <button onclick="showServices()">Get Started</button>
+        <a href="#servicesPage" class="ghost-btn" onclick="showServices()">Explore Tools</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services Page -->
+  <section id="servicesPage" class="page services-page hidden">
+    <header class="site-header">
+      <div class="brand-wrap">
+        <img src="images/waex-circle.png" alt="WAEX Logo" class="header-logo" />
+        <div>
+          <h1 class="brand-title">WAEX Tools Studio</h1>
+          <p class="brand-subtitle">Modern tools. Clean results.</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="section-intro">
+      <p class="eyebrow">SERVICES</p>
+      <h2>Choose Your Service</h2>
+      <p>Select the tool you want to use today.</p>
+    </div>
+
+    <div class="service-container">
+      <div class="service-card" onclick="openTool('background')">
+        <div class="service-icon">🖼️</div>
+        <h3>Background Remover</h3>
+        <p>Remove image backgrounds instantly and download the result as PNG.</p>
+      </div>
+
+      <div class="service-card" onclick="openTool('docx')">
+        <div class="service-icon">📄</div>
+        <h3>DOCX to PDF Converter</h3>
+        <p>Convert Word documents into clean and professional PDF files.</p>
+      </div>
+
+      <div class="service-card coming-soon">
+        <div class="service-icon">✨</div>
+        <h3>More PDF Tools</h3>
+        <p>More smart document features are coming soon.</p>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <p>WAEX Tools Studio</p>
+      <span>Smart file tools for everyday use.</span>
+    </footer>
+  </section>
+
+  <!-- Tool Page -->
+  <section id="toolPage" class="page tool-page hidden">
+    <header class="site-header">
+      <div class="brand-wrap">
+        <img src="images/waex-circle.png" alt="WAEX Logo" class="header-logo" />
+        <div>
+          <h1 class="brand-title">WAEX Tools Studio</h1>
+          <p class="brand-subtitle">Modern tools. Clean results.</p>
+        </div>
+      </div>
+    </header>
+
+    <button class="back-btn" onclick="goBack()">← Back</button>
+
+    <div class="tool-card">
+      <p class="eyebrow">WORKSPACE</p>
+      <h2 id="toolTitle">Tool Name</h2>
+      <p id="toolDescription">Tool description here.</p>
+
+      <div id="dropArea" class="drop-area">
+        <input type="file" id="fileInput" hidden />
+        <div class="drop-content">
+          <p class="drop-title">Drag & Drop Your File Here</p>
+          <p class="drop-subtitle">or</p>
+          <label for="fileInput" class="custom-file-upload">Choose File</label>
+          <p id="fileName" class="file-name">No file selected</p>
+        </div>
+      </div>
+
+      <div id="progressSection" class="progress-section hidden">
+        <div class="progress-top">
+          <span id="progressLabel">Preparing file...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div id="previewSection" class="preview-section hidden">
+        <div id="originalCard" class="preview-card hidden">
+          <h3>Original Image</h3>
+          <div class="preview-box">
+            <img id="originalPreviewImg" src="" alt="Original Image" />
+          </div>
+        </div>
+
+        <div id="resultCard" class="preview-card hidden">
+          <h3>Processed Result</h3>
+          <div class="preview-box transparent-bg">
+            <img id="resultPreviewImg" src="" alt="Processed Result" />
+          </div>
+
+          <div id="resultInfoCard" class="result-info hidden">
+            <div class="result-info-row">
+              <span>Output</span>
+              <strong id="resultFileType">PNG</strong>
+            </div>
+            <div class="result-info-row">
+              <span>Status</span>
+              <strong id="resultStatusText">Ready</strong>
+            </div>
+          </div>
+
+          <button id="downloadAgainBtn" class="secondary-btn hidden">⬇ Download Again</button>
+        </div>
+      </div>
+
+      <button class="upload-btn">
+        <span class="btn-text">Upload & Process</span>
+        <span class="spinner hidden"></span>
+      </button>
+
+      <div id="statusMessage" class="status-message hidden"></div>
+
+      <p class="note">Upload a file and click the button to process it.</p>
+    </div>
+
+    <footer class="site-footer">
+      <p>WAEX Tools Studio</p>
+      <span>Built for clean, fast, practical conversion tools.</span>
+    </footer>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>

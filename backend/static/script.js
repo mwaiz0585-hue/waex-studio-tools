@@ -1,5 +1,6 @@
 let selectedTool = "";
 let lastDownloadUrl = "";
+let lastDownloadFilename = "";
 let progressInterval = null;
 
 function showServices() {
@@ -65,6 +66,15 @@ function openTool(toolName) {
     note.textContent = "Upload a DOC or DOCX file and click the button to convert it into PDF.";
     dropTitle.textContent = "Drag & Drop Your DOCX File Here";
     document.title = "WAEX Tools Studio | DOCX to PDF";
+  }
+
+  if (toolName === "image") {
+    title.textContent = "Image to PDF Converter";
+    description.textContent = "Upload an image and convert it into a PDF document.";
+    fileInput.accept = "image/*";
+    note.textContent = "Supported formats: PNG, JPG, JPEG, BMP, GIF, TIFF, WEBP.";
+    dropTitle.textContent = "Drag & Drop Your Image Here";
+    document.title = "WAEX Tools Studio | Image to PDF";
   }
 }
 
@@ -207,6 +217,20 @@ function handleSelectedFile(file) {
     return;
   }
 
+  if (selectedTool === "image" && !file.type.startsWith("image/")) {
+    fileInput.value = "";
+    fileName.textContent = "No file selected";
+    previewSection.classList.add("hidden");
+    originalCard.classList.add("hidden");
+    resultCard.classList.add("hidden");
+    originalPreviewImg.src = "";
+    resultPreviewImg.src = "";
+    resultInfoCard.classList.add("hidden");
+    downloadAgainBtn.classList.add("hidden");
+    showStatus("Please select an image file for Image to PDF conversion.", "error");
+    return;
+  }
+
   if (
     selectedTool === "docx" &&
     !file.name.toLowerCase().endsWith(".doc") &&
@@ -231,7 +255,7 @@ function handleSelectedFile(file) {
   resultInfoCard.classList.add("hidden");
   downloadAgainBtn.classList.add("hidden");
 
-  if (selectedTool === "background" && file.type.startsWith("image/")) {
+  if ((selectedTool === "background" || selectedTool === "image") && file.type.startsWith("image/")) {
     const reader = new FileReader();
     reader.onload = function (e) {
       originalPreviewImg.src = e.target.result;
@@ -291,8 +315,8 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   downloadAgainBtn.addEventListener("click", function () {
-    if (lastDownloadUrl) {
-      triggerDownload(lastDownloadUrl, "waex-background-removed.png");
+    if (lastDownloadUrl && lastDownloadFilename) {
+      triggerDownload(lastDownloadUrl, lastDownloadFilename);
     }
   });
 
@@ -306,6 +330,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (selectedTool === "background") {
       await removeBackground(file);
+      return;
+    }
+
+    if (selectedTool === "image") {
+      await convertImageToPdf(file);
       return;
     }
 
@@ -368,6 +397,7 @@ async function removeBackground(file) {
     completeProgress("Background removed");
     triggerDownload(downloadUrl, "waex-background-removed.png");
 
+    lastDownloadFilename = "waex-background-removed.png";
     showStatus("Background removed successfully. Your result is shown below.", "success");
   } catch (error) {
     console.error(error);
@@ -380,7 +410,62 @@ async function removeBackground(file) {
     setButtonLoading(false, "Upload & Process");
   }
 }
+async function convertImageToPdf(file) {
+  const formData = new FormData();
+  formData.append("file", file);
 
+  hideStatus();
+  startFakeProgress("Converting image...");
+  setButtonLoading(true, "Converting...");
+
+  try {
+    const response = await fetch("/image-to-pdf", {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      let errorText = "Failed to convert image to PDF.";
+      const responseText = await response.text();
+      try {
+        const errorJson = JSON.parse(responseText);
+        if (errorJson && errorJson.error) {
+          errorText = errorJson.error;
+        } else if (responseText) {
+          errorText = responseText;
+        }
+      } catch (jsonError) {
+        if (responseText) {
+          errorText = responseText;
+        }
+      }
+      throw new Error(errorText || "Failed to convert image to PDF.");
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const originalName = file.name.replace(/\.[^/.]+$/, "");
+
+    lastDownloadFilename = `${originalName}.pdf`;
+    triggerDownload(downloadUrl, `${originalName}.pdf`);
+
+    setTimeout(() => {
+      window.URL.revokeObjectURL(downloadUrl);
+    }, 1000);
+
+    completeProgress("Conversion completed");
+    showStatus("Image converted successfully. Your PDF has been downloaded.", "success");
+  } catch (error) {
+    console.error(error);
+    resetProgress();
+    showStatus(error.message || "Failed to convert image to PDF. Please try again.", "error");
+  } finally {
+    setTimeout(() => {
+      resetProgress();
+    }, 800);
+    setButtonLoading(false, "Upload & Process");
+  }
+}
 async function convertDocxToPdf(file) {
   const formData = new FormData();
   formData.append("file", file);
@@ -396,7 +481,20 @@ async function convertDocxToPdf(file) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      let errorText = "Failed to convert DOCX to PDF.";
+      const responseText = await response.text();
+      try {
+        const errorJson = JSON.parse(responseText);
+        if (errorJson && errorJson.error) {
+          errorText = errorJson.error;
+        } else if (responseText) {
+          errorText = responseText;
+        }
+      } catch (jsonError) {
+        if (responseText) {
+          errorText = responseText;
+        }
+      }
       throw new Error(errorText || "Failed to convert DOCX to PDF.");
     }
 
@@ -405,6 +503,7 @@ async function convertDocxToPdf(file) {
 
     const originalName = file.name.replace(/\.[^/.]+$/, "");
     completeProgress("Conversion completed");
+    lastDownloadFilename = `${originalName}.pdf`;
     triggerDownload(downloadUrl, `${originalName}.pdf`);
 
     setTimeout(() => {
@@ -415,7 +514,7 @@ async function convertDocxToPdf(file) {
   } catch (error) {
     console.error(error);
     resetProgress();
-    showStatus("Failed to convert DOCX to PDF. Please try again.", "error");
+    showStatus(error.message || "Failed to convert DOCX to PDF. Please try again.", "error");
   } finally {
     setTimeout(() => {
       resetProgress();

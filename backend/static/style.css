@@ -679,3 +679,144 @@ button:hover {
     gap: 12px;
   }
 }
+
+
+/* PDF Editor Action Cards */
+.pdf-options {
+  margin: 22px 0 26px;
+  padding: 24px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  text-align: left;
+}
+
+.pdf-action-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.pdf-action-header h3 {
+  font-size: 28px;
+  margin: 6px 0 8px;
+  color: #fff;
+}
+
+.pdf-action-header p:last-child {
+  color: #d7d7d7;
+  font-size: 15px;
+  margin-bottom: 0;
+}
+
+.pdf-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.pdf-action-card {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  padding: 22px;
+  min-height: 150px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pdf-action-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.pdf-action-card.active {
+  border-color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.28);
+}
+
+.pdf-action-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.pdf-action-card strong {
+  display: block;
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.pdf-action-card small {
+  color: #d7d7d7;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pdf-option-group {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.pdf-option-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #f4f4f4;
+}
+
+.pdf-option-group select,
+.pdf-option-group input {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  outline: none;
+  font-size: 15px;
+}
+
+.pdf-option-group small {
+  display: block;
+  margin-top: 8px;
+  color: #d7d7d7;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .pdf-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .pdf-options {
+    padding: 16px;
+  }
+
+  .pdf-action-header h3 {
+    font-size: 24px;
+  }
+
+  .pdf-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pdf-action-card {
+    min-height: 135px;
+  }
+}

@@ -4,3 +4,5 @@ rembg
 pillow
 onnxruntime
 gunicorn
+pypdf
+docx2pdf

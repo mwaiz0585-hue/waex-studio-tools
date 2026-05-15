@@ -2,6 +2,8 @@ from flask import Flask, request, send_file, jsonify, send_from_directory
 from flask_cors import CORS
 from rembg import remove, new_session
 from PIL import Image, UnidentifiedImageError
+from pypdf import PdfReader, PdfWriter
+from docx2pdf import convert as docx2pdf_convert
 import io
 import os
 import tempfile
@@ -29,6 +31,89 @@ def find_libreoffice():
             return path
 
     return None
+
+
+def parse_page_ranges(page_text, total_pages):
+    """
+    Converts page input like:
+    1,3,5-7
+    into zero-based page indexes:
+    [0, 2, 4, 5, 6]
+    """
+    if not page_text or not page_text.strip():
+        raise ValueError("Please enter page numbers.")
+
+    selected_pages = []
+    parts = page_text.replace(" ", "").split(",")
+
+    for part in parts:
+        if not part:
+            continue
+
+        if "-" in part:
+            start_text, end_text = part.split("-", 1)
+
+            if not start_text.isdigit() or not end_text.isdigit():
+                raise ValueError("Invalid page range format.")
+
+            start = int(start_text)
+            end = int(end_text)
+
+            if start > end:
+                raise ValueError("Page range start cannot be greater than end.")
+
+            for page_number in range(start, end + 1):
+                if page_number < 1 or page_number > total_pages:
+                    raise ValueError(f"Page {page_number} is out of range.")
+                selected_pages.append(page_number - 1)
+        else:
+            if not part.isdigit():
+                raise ValueError("Invalid page number format.")
+
+            page_number = int(part)
+
+            if page_number < 1 or page_number > total_pages:
+                raise ValueError(f"Page {page_number} is out of range.")
+
+            selected_pages.append(page_number - 1)
+
+    if not selected_pages:
+        raise ValueError("No valid pages selected.")
+
+    return selected_pages
+
+
+def read_pdf_from_upload(file, password=None):
+    pdf_bytes = file.read()
+
+    if not pdf_bytes:
+        raise ValueError("Uploaded PDF file is empty.")
+
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+
+    if reader.is_encrypted:
+        if not password:
+            raise ValueError("This PDF is password protected. Please provide the password.")
+
+        decrypt_result = reader.decrypt(password)
+
+        if decrypt_result == 0:
+            raise ValueError("Incorrect PDF password.")
+
+    return reader
+
+
+def send_pdf(writer, filename):
+    output = io.BytesIO()
+    writer.write(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 try:
@@ -99,39 +184,99 @@ def docx_to_pdf():
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            input_path = os.path.join(temp_dir, file.filename)
+            original_name = os.path.splitext(file.filename)[0]
+            input_ext = os.path.splitext(file.filename)[1].lower()
+
+            input_path = os.path.join(temp_dir, f"input{input_ext}")
+            output_path = os.path.join(temp_dir, "output.pdf")
+
             file.save(input_path)
 
+            # Windows local testing: use docx2pdf instead of LibreOffice
+            if os.name == "nt":
+                try:
+                    docx2pdf_convert(input_path, output_path)
+
+                    if not os.path.exists(output_path):
+                        return jsonify({
+                            "error": "DOCX to PDF conversion failed. Output PDF was not created."
+                        }), 500
+
+                    with open(output_path, "rb") as pdf_file:
+                        pdf_bytes = io.BytesIO(pdf_file.read())
+
+                    pdf_bytes.seek(0)
+
+                    return send_file(
+                        pdf_bytes,
+                        mimetype="application/pdf",
+                        as_attachment=True,
+                        download_name=f"{original_name}.pdf"
+                    )
+
+                except Exception as e:
+                    print("docx2pdf conversion error:", e)
+                    return jsonify({
+                        "error": "DOCX to PDF failed using docx2pdf. Make sure Microsoft Word is installed on this laptop.",
+                        "details": str(e)
+                    }), 500
+
+            # Linux / Oracle server: use LibreOffice
             libreoffice_path = find_libreoffice()
 
             print("LibreOffice path:", libreoffice_path)
 
             if not libreoffice_path:
                 return jsonify({
-                    "error": "LibreOffice not found. Please install LibreOffice or check the soffice.exe path."
+                    "error": "LibreOffice not found on server."
                 }), 500
 
-            subprocess.run(
+            lo_profile = os.path.join(temp_dir, "lo_profile")
+            os.makedirs(lo_profile, exist_ok=True)
+
+            result = subprocess.run(
                 [
                     libreoffice_path,
                     "--headless",
+                    "--nologo",
+                    "--nofirststartwizard",
+                    "--nolockcheck",
+                    f"-env:UserInstallation=file://{lo_profile}",
                     "--convert-to",
-                    "pdf",
+                    "pdf:writer_pdf_Export",
                     "--outdir",
                     temp_dir,
                     input_path
                 ],
-                check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
+                timeout=180
             )
 
-            pdf_filename = os.path.splitext(file.filename)[0] + ".pdf"
-            pdf_path = os.path.join(temp_dir, pdf_filename)
+            print("LibreOffice return code:", result.returncode)
+            print("LibreOffice STDOUT:", result.stdout)
+            print("LibreOffice STDERR:", result.stderr)
 
-            if not os.path.exists(pdf_path):
-                return jsonify({"error": "PDF conversion failed. Output PDF was not created."}), 500
+            if result.returncode != 0:
+                return jsonify({
+                    "error": "LibreOffice failed to convert the document.",
+                    "details": result.stderr or result.stdout
+                }), 500
+
+            pdf_files = [
+                name for name in os.listdir(temp_dir)
+                if name.lower().endswith(".pdf")
+            ]
+
+            if not pdf_files:
+                return jsonify({
+                    "error": "PDF conversion failed. Output PDF was not created.",
+                    "stdout": result.stdout,
+                    "stderr": result.stderr
+                }), 500
+
+            pdf_path = os.path.join(temp_dir, pdf_files[0])
 
             with open(pdf_path, "rb") as pdf_file:
                 pdf_bytes = io.BytesIO(pdf_file.read())
@@ -142,18 +287,17 @@ def docx_to_pdf():
                 pdf_bytes,
                 mimetype="application/pdf",
                 as_attachment=True,
-                download_name=pdf_filename
+                download_name=f"{original_name}.pdf"
             )
 
-    except subprocess.CalledProcessError as e:
-        print("LibreOffice conversion error:")
-        print("STDOUT:", e.stdout)
-        print("STDERR:", e.stderr)
-
+    except subprocess.TimeoutExpired:
         return jsonify({
-            "error": "LibreOffice failed to convert the document.",
-            "details": e.stderr
+            "error": "Conversion took too long. Please try a smaller DOCX file."
         }), 500
+
+    except Exception as e:
+        print("DOCX to PDF error:", e)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/image-to-pdf", methods=["POST"])
@@ -168,6 +312,7 @@ def image_to_pdf():
 
     allowed_extensions = (".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tiff", ".tif", ".webp")
     supported_formats = "PNG, JPG, JPEG, BMP, GIF, TIFF, WEBP"
+
     if not file.filename.lower().endswith(allowed_extensions):
         return jsonify({"error": f"Please upload a supported image file ({supported_formats})."}), 400
 
@@ -180,7 +325,9 @@ def image_to_pdf():
         try:
             image = Image.open(io.BytesIO(input_bytes))
         except UnidentifiedImageError:
-            return jsonify({"error": "Unable to identify the image file. Please upload a valid image in supported formats."}), 400
+            return jsonify({
+                "error": "Unable to identify the image file. Please upload a valid image in supported formats."
+            }), 400
 
         if getattr(image, "is_animated", False):
             image = image.convert("RGB")
@@ -201,6 +348,216 @@ def image_to_pdf():
     except Exception as e:
         print("Image to PDF error:", e)
         return jsonify({"error": "Failed to convert image to PDF. Please upload a supported image file."}), 500
+
+
+# =========================
+# PDF EDITOR TOOLS
+# =========================
+
+@app.route("/merge-pdf", methods=["POST"])
+def merge_pdf():
+    files = request.files.getlist("files")
+
+    if not files or len(files) < 2:
+        return jsonify({"error": "Please upload at least 2 PDF files to merge."}), 400
+
+    writer = PdfWriter()
+
+    try:
+        for file in files:
+            if file.filename == "":
+                continue
+
+            if not file.filename.lower().endswith(".pdf"):
+                return jsonify({"error": "Only PDF files are allowed."}), 400
+
+            reader = read_pdf_from_upload(file)
+
+            for page in reader.pages:
+                writer.add_page(page)
+
+        if len(writer.pages) == 0:
+            return jsonify({"error": "No valid PDF pages found."}), 400
+
+        return send_pdf(writer, "waex-merged.pdf")
+
+    except Exception as e:
+        print("Merge PDF error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/split-pdf", methods=["POST"])
+def split_pdf():
+    if "file" not in request.files:
+        return jsonify({"error": "No PDF file uploaded."}), 400
+
+    file = request.files["file"]
+    pages_text = request.form.get("pages", "")
+
+    if file.filename == "":
+        return jsonify({"error": "No selected PDF file."}), 400
+
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Please upload a PDF file."}), 400
+
+    try:
+        reader = read_pdf_from_upload(file)
+        total_pages = len(reader.pages)
+        selected_pages = parse_page_ranges(pages_text, total_pages)
+
+        writer = PdfWriter()
+
+        for page_index in selected_pages:
+            writer.add_page(reader.pages[page_index])
+
+        original_name = os.path.splitext(file.filename)[0]
+        return send_pdf(writer, f"{original_name}-split.pdf")
+
+    except Exception as e:
+        print("Split PDF error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/delete-pdf-pages", methods=["POST"])
+def delete_pdf_pages():
+    if "file" not in request.files:
+        return jsonify({"error": "No PDF file uploaded."}), 400
+
+    file = request.files["file"]
+    pages_text = request.form.get("pages", "")
+
+    if file.filename == "":
+        return jsonify({"error": "No selected PDF file."}), 400
+
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Please upload a PDF file."}), 400
+
+    try:
+        reader = read_pdf_from_upload(file)
+        total_pages = len(reader.pages)
+        pages_to_delete = set(parse_page_ranges(pages_text, total_pages))
+
+        if len(pages_to_delete) >= total_pages:
+            return jsonify({"error": "You cannot delete all pages from the PDF."}), 400
+
+        writer = PdfWriter()
+
+        for index, page in enumerate(reader.pages):
+            if index not in pages_to_delete:
+                writer.add_page(page)
+
+        original_name = os.path.splitext(file.filename)[0]
+        return send_pdf(writer, f"{original_name}-pages-deleted.pdf")
+
+    except Exception as e:
+        print("Delete PDF pages error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/rotate-pdf-pages", methods=["POST"])
+def rotate_pdf_pages():
+    if "file" not in request.files:
+        return jsonify({"error": "No PDF file uploaded."}), 400
+
+    file = request.files["file"]
+    pages_text = request.form.get("pages", "")
+    rotation_text = request.form.get("rotation", "90")
+
+    if file.filename == "":
+        return jsonify({"error": "No selected PDF file."}), 400
+
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Please upload a PDF file."}), 400
+
+    try:
+        rotation = int(rotation_text)
+
+        if rotation not in [90, 180, 270]:
+            return jsonify({"error": "Rotation must be 90, 180, or 270 degrees."}), 400
+
+        reader = read_pdf_from_upload(file)
+        total_pages = len(reader.pages)
+        selected_pages = set(parse_page_ranges(pages_text, total_pages))
+
+        writer = PdfWriter()
+
+        for index, page in enumerate(reader.pages):
+            if index in selected_pages:
+                page.rotate(rotation)
+            writer.add_page(page)
+
+        original_name = os.path.splitext(file.filename)[0]
+        return send_pdf(writer, f"{original_name}-rotated.pdf")
+
+    except Exception as e:
+        print("Rotate PDF pages error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/protect-pdf", methods=["POST"])
+def protect_pdf():
+    if "file" not in request.files:
+        return jsonify({"error": "No PDF file uploaded."}), 400
+
+    file = request.files["file"]
+    password = request.form.get("password", "")
+
+    if file.filename == "":
+        return jsonify({"error": "No selected PDF file."}), 400
+
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Please upload a PDF file."}), 400
+
+    if not password:
+        return jsonify({"error": "Please enter a password to protect the PDF."}), 400
+
+    try:
+        reader = read_pdf_from_upload(file)
+        writer = PdfWriter()
+
+        for page in reader.pages:
+            writer.add_page(page)
+
+        writer.encrypt(password)
+
+        original_name = os.path.splitext(file.filename)[0]
+        return send_pdf(writer, f"{original_name}-protected.pdf")
+
+    except Exception as e:
+        print("Protect PDF error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/unlock-pdf", methods=["POST"])
+def unlock_pdf():
+    if "file" not in request.files:
+        return jsonify({"error": "No PDF file uploaded."}), 400
+
+    file = request.files["file"]
+    password = request.form.get("password", "")
+
+    if file.filename == "":
+        return jsonify({"error": "No selected PDF file."}), 400
+
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Please upload a PDF file."}), 400
+
+    if not password:
+        return jsonify({"error": "Please enter the PDF password."}), 400
+
+    try:
+        reader = read_pdf_from_upload(file, password=password)
+        writer = PdfWriter()
+
+        for page in reader.pages:
+            writer.add_page(page)
+
+        original_name = os.path.splitext(file.filename)[0]
+        return send_pdf(writer, f"{original_name}-unlocked.pdf")
+
+    except Exception as e:
+        print("Unlock PDF error:", e)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/<path:path>")

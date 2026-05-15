@@ -3,7 +3,12 @@ from flask_cors import CORS
 from rembg import remove, new_session
 from PIL import Image, UnidentifiedImageError
 from pypdf import PdfReader, PdfWriter
-from docx2pdf import convert as docx2pdf_convert
+
+try:
+    from docx2pdf import convert as docx2pdf_convert
+except Exception:
+    docx2pdf_convert = None
+
 import io
 import os
 import tempfile

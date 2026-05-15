@@ -3,6 +3,8 @@ from flask_cors import CORS
 from rembg import remove, new_session
 from PIL import Image, UnidentifiedImageError
 from pypdf import PdfReader, PdfWriter
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 
 try:
     from docx2pdf import convert as docx2pdf_convert
@@ -14,6 +16,7 @@ import os
 import tempfile
 import subprocess
 import shutil
+
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)
@@ -71,6 +74,7 @@ def parse_page_ranges(page_text, total_pages):
                 if page_number < 1 or page_number > total_pages:
                     raise ValueError(f"Page {page_number} is out of range.")
                 selected_pages.append(page_number - 1)
+
         else:
             if not part.isdigit():
                 raise ValueError("Invalid page number format.")
@@ -197,14 +201,18 @@ def docx_to_pdf():
 
             file.save(input_path)
 
-            # Windows local testing: use docx2pdf instead of LibreOffice
             if os.name == "nt":
+                if docx2pdf_convert is None:
+                    return jsonify({
+                        "error": "docx2pdf is not available. Please install docx2pdf and pywin32."
+                    }), 500
+
                 try:
                     docx2pdf_convert(input_path, output_path)
 
                     if not os.path.exists(output_path):
                         return jsonify({
-                            "error": "DOCX to PDF conversion failed. Output PDF was not created."
+                            "error": "DOCX to PDF failed. Output PDF was not created."
                         }), 500
 
                     with open(output_path, "rb") as pdf_file:
@@ -222,11 +230,10 @@ def docx_to_pdf():
                 except Exception as e:
                     print("docx2pdf conversion error:", e)
                     return jsonify({
-                        "error": "DOCX to PDF failed using docx2pdf. Make sure Microsoft Word is installed on this laptop.",
+                        "error": "DOCX to PDF failed using docx2pdf. Make sure Microsoft Word is installed and activated on this laptop.",
                         "details": str(e)
                     }), 500
 
-            # Linux / Oracle server: use LibreOffice
             libreoffice_path = find_libreoffice()
 
             print("LibreOffice path:", libreoffice_path)
@@ -562,6 +569,119 @@ def unlock_pdf():
 
     except Exception as e:
         print("Unlock PDF error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/add-signature-pdf", methods=["POST"])
+def add_signature_pdf():
+    if "file" not in request.files:
+        return jsonify({"error": "No PDF file uploaded."}), 400
+
+    if "signature" not in request.files:
+        return jsonify({"error": "No signature image uploaded."}), 400
+
+    pdf_file = request.files["file"]
+    signature_file = request.files["signature"]
+
+    page_input = request.form.get("signature_page", "1").strip().lower()
+    preview_x_text = request.form.get("signature_x", "0").strip()
+    preview_y_text = request.form.get("signature_y", "0").strip()
+    preview_width_text = request.form.get("preview_width", "1").strip()
+    preview_height_text = request.form.get("preview_height", "1").strip()
+    signature_display_width_text = request.form.get("signature_display_width", "150").strip()
+    signature_display_height_text = request.form.get("signature_display_height", "60").strip()
+
+    if pdf_file.filename == "":
+        return jsonify({"error": "No selected PDF file."}), 400
+
+    if signature_file.filename == "":
+        return jsonify({"error": "No selected signature image."}), 400
+
+    if not pdf_file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Please upload a PDF file."}), 400
+
+    if not signature_file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+        return jsonify({"error": "Signature must be PNG, JPG, or JPEG."}), 400
+
+    try:
+        preview_x = float(preview_x_text)
+        preview_y = float(preview_y_text)
+        preview_width = float(preview_width_text)
+        preview_height = float(preview_height_text)
+        signature_display_width = float(signature_display_width_text)
+        signature_display_height = float(signature_display_height_text)
+
+        if preview_width <= 0 or preview_height <= 0:
+            return jsonify({"error": "Invalid PDF preview size."}), 400
+
+        if signature_display_width <= 0 or signature_display_height <= 0:
+            return jsonify({"error": "Invalid signature size."}), 400
+
+        reader = read_pdf_from_upload(pdf_file)
+        writer = PdfWriter()
+        total_pages = len(reader.pages)
+
+        signature_bytes = signature_file.read()
+
+        if not signature_bytes:
+            return jsonify({"error": "Signature image is empty."}), 400
+
+        try:
+            signature_image = Image.open(io.BytesIO(signature_bytes))
+            signature_image.verify()
+        except Exception:
+            return jsonify({"error": "Invalid signature image file."}), 400
+
+        if page_input == "all":
+            target_pages = set(range(total_pages))
+        else:
+            if not page_input.isdigit():
+                return jsonify({"error": "Signature page must be a number or 'all'."}), 400
+
+            page_number = int(page_input)
+
+            if page_number < 1 or page_number > total_pages:
+                return jsonify({"error": f"Page {page_number} is out of range."}), 400
+
+            target_pages = {page_number - 1}
+
+        for index, page in enumerate(reader.pages):
+            if index in target_pages:
+                page_width = float(page.mediabox.width)
+                page_height = float(page.mediabox.height)
+
+                pdf_x = (preview_x / preview_width) * page_width
+                pdf_signature_width = (signature_display_width / preview_width) * page_width
+                pdf_signature_height = (signature_display_height / preview_height) * page_height
+
+                # Browser y starts from top. PDF y starts from bottom.
+                pdf_y = page_height - ((preview_y + signature_display_height) / preview_height) * page_height
+
+                overlay_stream = io.BytesIO()
+                c = canvas.Canvas(overlay_stream, pagesize=(page_width, page_height))
+
+                c.drawImage(
+                    ImageReader(io.BytesIO(signature_bytes)),
+                    pdf_x,
+                    pdf_y,
+                    width=pdf_signature_width,
+                    height=pdf_signature_height,
+                    mask="auto"
+                )
+
+                c.save()
+                overlay_stream.seek(0)
+
+                overlay_pdf = PdfReader(overlay_stream)
+                page.merge_page(overlay_pdf.pages[0])
+
+            writer.add_page(page)
+
+        original_name = os.path.splitext(pdf_file.filename)[0]
+        return send_pdf(writer, f"{original_name}-signed.pdf")
+
+    except Exception as e:
+        print("Add signature PDF error:", e)
         return jsonify({"error": str(e)}), 500
 
 

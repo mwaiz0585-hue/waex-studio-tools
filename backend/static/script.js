@@ -4,6 +4,14 @@ let lastDownloadFilename = "";
 let progressInterval = null;
 let selectedPdfAction = "merge";
 
+let signaturePdfDoc = null;
+let signatureCurrentPage = 1;
+let signatureTotalPages = 0;
+let signatureImageUrl = "";
+let signatureDragging = false;
+let signatureDragOffsetX = 0;
+let signatureDragOffsetY = 0;
+
 function showServices() {
   document.getElementById("welcomePage").classList.add("hidden");
   document.getElementById("servicesPage").classList.remove("hidden");
@@ -17,10 +25,64 @@ function getPdfActionLabel(action) {
     delete: "Delete Pages",
     rotate: "Rotate Pages",
     protect: "Protect PDF",
-    unlock: "Unlock PDF"
+    unlock: "Unlock PDF",
+    signature: "Add Signature"
   };
 
   return labels[action] || "PDF Editor";
+}
+
+function resetSignatureEditor() {
+  signaturePdfDoc = null;
+  signatureCurrentPage = 1;
+  signatureTotalPages = 0;
+
+  const signatureInput = document.getElementById("pdfSignatureImage");
+  const signatureImage = document.getElementById("signatureDraggable");
+  const wrapper = document.getElementById("signaturePreviewWrapper");
+  const emptyState = document.getElementById("signatureEmptyState");
+  const pageInfo = document.getElementById("signaturePageInfo");
+  const widthRange = document.getElementById("pdfSignatureWidthRange");
+  const applyMode = document.getElementById("pdfSignatureApplyMode");
+
+  if (signatureInput) {
+    signatureInput.value = "";
+  }
+
+  if (signatureImage) {
+    signatureImage.src = "";
+    signatureImage.classList.add("hidden");
+    signatureImage.style.left = "20px";
+    signatureImage.style.top = "20px";
+    signatureImage.style.width = "150px";
+  }
+
+  if (signatureImageUrl) {
+    URL.revokeObjectURL(signatureImageUrl);
+    signatureImageUrl = "";
+  }
+
+  if (wrapper) {
+    wrapper.classList.add("hidden");
+    wrapper.style.width = "";
+    wrapper.style.height = "";
+  }
+
+  if (emptyState) {
+    emptyState.classList.remove("hidden");
+  }
+
+  if (pageInfo) {
+    pageInfo.textContent = "Upload a PDF to preview pages";
+  }
+
+  if (widthRange) {
+    widthRange.value = "150";
+  }
+
+  if (applyMode) {
+    applyMode.value = "current";
+  }
 }
 
 function resetToolUI() {
@@ -61,6 +123,7 @@ function resetToolUI() {
     pdfOptions.classList.add("hidden");
   }
 
+  resetSignatureEditor();
   hideStatus();
   resetProgress();
 
@@ -126,7 +189,7 @@ function openTool(toolName) {
     title.textContent = "PDF Editor Tools";
     description.textContent = "Choose a PDF action and upload your PDF file.";
     fileInput.accept = ".pdf,application/pdf";
-    note.textContent = "Merge, split, delete, rotate, protect, or unlock PDF files.";
+    note.textContent = "Merge, split, delete, rotate, protect, unlock, or sign PDF files.";
     dropTitle.textContent = "Drag & Drop Your PDF Files Here";
     pdfOptions.classList.remove("hidden");
 
@@ -230,6 +293,7 @@ function updatePdfActionUI() {
   const pagesGroup = document.getElementById("pdfPagesGroup");
   const rotationGroup = document.getElementById("pdfRotationGroup");
   const passwordGroup = document.getElementById("pdfPasswordGroup");
+  const signatureGroup = document.getElementById("pdfSignatureGroup");
   const note = document.querySelector(".note");
   const dropTitle = document.querySelector(".drop-title");
   const chooseLabel = document.querySelector(".custom-file-upload");
@@ -238,10 +302,15 @@ function updatePdfActionUI() {
   rotationGroup.classList.add("hidden");
   passwordGroup.classList.add("hidden");
 
+  if (signatureGroup) {
+    signatureGroup.classList.add("hidden");
+  }
+
   fileInput.accept = ".pdf,application/pdf";
   fileInput.value = "";
   fileName.textContent = "No file selected";
   hideStatus();
+  resetSignatureEditor();
 
   if (selectedPdfAction === "merge") {
     fileInput.multiple = true;
@@ -281,6 +350,155 @@ function updatePdfActionUI() {
     passwordGroup.classList.remove("hidden");
     note.textContent = "Enter the current PDF password to unlock it.";
   }
+
+  if (selectedPdfAction === "signature") {
+    if (signatureGroup) {
+      signatureGroup.classList.remove("hidden");
+    }
+
+    fileInput.multiple = false;
+    fileInput.removeAttribute("multiple");
+    chooseLabel.textContent = "Choose PDF";
+    dropTitle.textContent = "Drag & Drop Your PDF File Here";
+    note.textContent = "Upload a PDF, upload your signature image, drag it into place, then process.";
+  }
+}
+
+async function prepareSignaturePdfPreview(file) {
+  if (!file || selectedPdfAction !== "signature") {
+    return;
+  }
+
+  const wrapper = document.getElementById("signaturePreviewWrapper");
+  const emptyState = document.getElementById("signatureEmptyState");
+  const pageInfo = document.getElementById("signaturePageInfo");
+
+  try {
+    if (!window.pdfjsLib) {
+      showStatus("PDF preview library failed to load. Please check your internet connection.", "error");
+      return;
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    signaturePdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    signatureTotalPages = signaturePdfDoc.numPages;
+    signatureCurrentPage = 1;
+
+    wrapper.classList.remove("hidden");
+    emptyState.classList.add("hidden");
+
+    await renderSignaturePage();
+
+    pageInfo.textContent = `Page ${signatureCurrentPage} of ${signatureTotalPages}`;
+    placeSignatureDefault();
+  } catch (error) {
+    console.error(error);
+    showStatus("Unable to preview this PDF. Please try another PDF file.", "error");
+  }
+}
+
+async function renderSignaturePage() {
+  if (!signaturePdfDoc) {
+    return;
+  }
+
+  const canvas = document.getElementById("pdfSignatureCanvas");
+  const wrapper = document.getElementById("signaturePreviewWrapper");
+  const pageInfo = document.getElementById("signaturePageInfo");
+  const shell = document.getElementById("signaturePreviewShell");
+
+  const page = await signaturePdfDoc.getPage(signatureCurrentPage);
+
+  const baseViewport = page.getViewport({ scale: 1 });
+  const maxWidth = Math.min(shell.clientWidth - 28, 820);
+  const scale = Math.max(0.4, Math.min(maxWidth / baseViewport.width, 1.35));
+  const viewport = page.getViewport({ scale });
+
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+
+  wrapper.style.width = `${canvas.width}px`;
+  wrapper.style.height = `${canvas.height}px`;
+
+  const context = canvas.getContext("2d");
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  await page.render({
+    canvasContext: context,
+    viewport: viewport
+  }).promise;
+
+  pageInfo.textContent = `Page ${signatureCurrentPage} of ${signatureTotalPages}`;
+  placeSignatureDefault();
+}
+
+function placeSignatureDefault() {
+  const signature = document.getElementById("signatureDraggable");
+  const wrapper = document.getElementById("signaturePreviewWrapper");
+
+  if (!signature || signature.classList.contains("hidden") || wrapper.classList.contains("hidden")) {
+    return;
+  }
+
+  const sigWidth = signature.offsetWidth || 150;
+  const sigHeight = signature.offsetHeight || 60;
+
+  const left = Math.max(12, wrapper.clientWidth - sigWidth - 40);
+  const top = Math.max(12, wrapper.clientHeight - sigHeight - 40);
+
+  signature.style.left = `${left}px`;
+  signature.style.top = `${top}px`;
+}
+
+function handleSignatureImageChange() {
+  const signatureInput = document.getElementById("pdfSignatureImage");
+  const signature = document.getElementById("signatureDraggable");
+  const widthRange = document.getElementById("pdfSignatureWidthRange");
+
+  const file = signatureInput.files[0];
+
+  if (!file) {
+    signature.classList.add("hidden");
+    signature.src = "";
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    signatureInput.value = "";
+    showStatus("Please upload a valid signature image.", "error");
+    return;
+  }
+
+  if (signatureImageUrl) {
+    URL.revokeObjectURL(signatureImageUrl);
+  }
+
+  signatureImageUrl = URL.createObjectURL(file);
+  signature.src = signatureImageUrl;
+  signature.style.width = `${widthRange.value}px`;
+  signature.classList.remove("hidden");
+
+  signature.onload = function () {
+    placeSignatureDefault();
+  };
+}
+
+function updateSignatureSize() {
+  const signature = document.getElementById("signatureDraggable");
+  const widthRange = document.getElementById("pdfSignatureWidthRange");
+
+  if (!signature) {
+    return;
+  }
+
+  signature.style.width = `${widthRange.value}px`;
+
+  const wrapper = document.getElementById("signaturePreviewWrapper");
+  const left = Math.min(signature.offsetLeft, wrapper.clientWidth - signature.offsetWidth);
+  const top = Math.min(signature.offsetTop, wrapper.clientHeight - signature.offsetHeight);
+
+  signature.style.left = `${Math.max(0, left)}px`;
+  signature.style.top = `${Math.max(0, top)}px`;
 }
 
 function handleSelectedFile() {
@@ -308,6 +526,7 @@ function handleSelectedFile() {
     resultPreviewImg.src = "";
     resultInfoCard.classList.add("hidden");
     downloadAgainBtn.classList.add("hidden");
+    resetSignatureEditor();
     return;
   }
 
@@ -363,6 +582,11 @@ function handleSelectedFile() {
     resultPreviewImg.src = "";
     resultInfoCard.classList.add("hidden");
     downloadAgainBtn.classList.add("hidden");
+
+    if (selectedPdfAction === "signature") {
+      prepareSignaturePdfPreview(file);
+    }
+
     return;
   }
 
@@ -413,11 +637,23 @@ function getErrorMessageFromResponse(responseText, fallback) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+  if (window.pdfjsLib) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+
   const uploadButton = document.querySelector(".upload-btn");
   const fileInput = document.getElementById("fileInput");
   const dropArea = document.getElementById("dropArea");
   const downloadAgainBtn = document.getElementById("downloadAgainBtn");
   const pdfActionCards = document.querySelectorAll(".pdf-action-card");
+
+  const signatureInput = document.getElementById("pdfSignatureImage");
+  const widthRange = document.getElementById("pdfSignatureWidthRange");
+  const prevPageBtn = document.getElementById("signaturePrevPage");
+  const nextPageBtn = document.getElementById("signatureNextPage");
+  const signature = document.getElementById("signatureDraggable");
+  const wrapper = document.getElementById("signaturePreviewWrapper");
 
   pdfActionCards.forEach(card => {
     card.addEventListener("click", function () {
@@ -433,6 +669,74 @@ document.addEventListener("DOMContentLoaded", function () {
   fileInput.addEventListener("change", function () {
     handleSelectedFile();
   });
+
+  if (signatureInput) {
+    signatureInput.addEventListener("change", handleSignatureImageChange);
+  }
+
+  if (widthRange) {
+    widthRange.addEventListener("input", updateSignatureSize);
+  }
+
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener("click", async function () {
+      if (!signaturePdfDoc || signatureCurrentPage <= 1) {
+        return;
+      }
+
+      signatureCurrentPage -= 1;
+      await renderSignaturePage();
+    });
+  }
+
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener("click", async function () {
+      if (!signaturePdfDoc || signatureCurrentPage >= signatureTotalPages) {
+        return;
+      }
+
+      signatureCurrentPage += 1;
+      await renderSignaturePage();
+    });
+  }
+
+  if (signature && wrapper) {
+    signature.addEventListener("pointerdown", function (e) {
+      signatureDragging = true;
+
+      const sigRect = signature.getBoundingClientRect();
+      signatureDragOffsetX = e.clientX - sigRect.left;
+      signatureDragOffsetY = e.clientY - sigRect.top;
+
+      signature.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    signature.addEventListener("pointermove", function (e) {
+      if (!signatureDragging) {
+        return;
+      }
+
+      const wrapperRect = wrapper.getBoundingClientRect();
+
+      let newLeft = e.clientX - wrapperRect.left - signatureDragOffsetX;
+      let newTop = e.clientY - wrapperRect.top - signatureDragOffsetY;
+
+      newLeft = Math.max(0, Math.min(newLeft, wrapper.clientWidth - signature.offsetWidth));
+      newTop = Math.max(0, Math.min(newTop, wrapper.clientHeight - signature.offsetHeight));
+
+      signature.style.left = `${newLeft}px`;
+      signature.style.top = `${newTop}px`;
+    });
+
+    signature.addEventListener("pointerup", function () {
+      signatureDragging = false;
+    });
+
+    signature.addEventListener("pointercancel", function () {
+      signatureDragging = false;
+    });
+  }
 
   ["dragenter", "dragover"].forEach(eventName => {
     dropArea.addEventListener(eventName, function (e) {
@@ -659,6 +963,12 @@ async function processPdfEditor() {
   const rotation = document.getElementById("pdfRotation").value;
   const password = document.getElementById("pdfPassword").value;
 
+  const signatureImage = document.getElementById("pdfSignatureImage");
+  const signatureApplyMode = document.getElementById("pdfSignatureApplyMode");
+  const signatureElement = document.getElementById("signatureDraggable");
+  const signatureWrapper = document.getElementById("signaturePreviewWrapper");
+  const signatureCanvas = document.getElementById("pdfSignatureCanvas");
+
   const files = Array.from(fileInput.files || []);
 
   if (action === "merge" && files.length < 2) {
@@ -681,13 +991,31 @@ async function processPdfEditor() {
     return;
   }
 
+  if (action === "signature") {
+    if (!signatureImage.files || signatureImage.files.length === 0) {
+      showStatus("Please upload a signature image.", "error");
+      return;
+    }
+
+    if (!signaturePdfDoc || signatureWrapper.classList.contains("hidden")) {
+      showStatus("Please wait for the PDF preview to load.", "error");
+      return;
+    }
+
+    if (signatureElement.classList.contains("hidden")) {
+      showStatus("Please place the signature on the PDF preview.", "error");
+      return;
+    }
+  }
+
   const endpointMap = {
     merge: "/merge-pdf",
     split: "/split-pdf",
     delete: "/delete-pdf-pages",
     rotate: "/rotate-pdf-pages",
     protect: "/protect-pdf",
-    unlock: "/unlock-pdf"
+    unlock: "/unlock-pdf",
+    signature: "/add-signature-pdf"
   };
 
   const filenameMap = {
@@ -696,7 +1024,8 @@ async function processPdfEditor() {
     delete: "waex-pages-deleted.pdf",
     rotate: "waex-rotated.pdf",
     protect: "waex-protected.pdf",
-    unlock: "waex-unlocked.pdf"
+    unlock: "waex-unlocked.pdf",
+    signature: "waex-signed.pdf"
   };
 
   const formData = new FormData();
@@ -717,6 +1046,20 @@ async function processPdfEditor() {
 
   if (["protect", "unlock"].includes(action)) {
     formData.append("password", password);
+  }
+
+  if (action === "signature") {
+    formData.append("signature", signatureImage.files[0]);
+
+    const pageValue = signatureApplyMode.value === "all" ? "all" : String(signatureCurrentPage);
+
+    formData.append("signature_page", pageValue);
+    formData.append("signature_x", String(signatureElement.offsetLeft));
+    formData.append("signature_y", String(signatureElement.offsetTop));
+    formData.append("preview_width", String(signatureCanvas.width));
+    formData.append("preview_height", String(signatureCanvas.height));
+    formData.append("signature_display_width", String(signatureElement.offsetWidth));
+    formData.append("signature_display_height", String(signatureElement.offsetHeight));
   }
 
   hideStatus();

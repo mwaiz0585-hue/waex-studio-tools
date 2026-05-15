@@ -34,7 +34,7 @@ body {
 
 .page {
   min-height: 100vh;
-  padding: 40px;
+  padding: 36px 40px;
 }
 
 .hidden {
@@ -46,13 +46,13 @@ body {
   font-weight: 700;
   letter-spacing: 2px;
   color: #cfcfcf;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 /* Header */
 .site-header {
   max-width: 1200px;
-  margin: 0 auto 30px;
+  margin: 0 auto 24px;
 }
 
 .brand-wrap {
@@ -259,11 +259,6 @@ button:hover {
   line-height: 1.6;
 }
 
-.coming-soon {
-  opacity: 0.68;
-  cursor: not-allowed;
-}
-
 /* Tool Page */
 .tool-page {
   display: flex;
@@ -286,7 +281,7 @@ button:hover {
 
 .tool-card {
   background: rgba(255, 255, 255, 0.08);
-  padding: 45px;
+  padding: 36px 44px;
   border-radius: 28px;
   max-width: 1000px;
   width: 100%;
@@ -300,13 +295,13 @@ button:hover {
 
 .tool-card h2 {
   font-size: 32px;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   color: #fff;
 }
 
 .tool-card p {
   color: rgba(255, 255, 255, 0.74);
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 /* Custom file upload */
@@ -318,7 +313,7 @@ button:hover {
   border-radius: 50px;
   cursor: pointer;
   transition: 0.3s ease;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   font-weight: 700;
 }
 
@@ -330,7 +325,7 @@ button:hover {
 .file-name {
   font-size: 15px;
   color: rgba(255, 255, 255, 0.74);
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   word-break: break-word;
 }
 
@@ -338,8 +333,8 @@ button:hover {
 .drop-area {
   border: 2px dashed rgba(255, 255, 255, 0.16);
   border-radius: 22px;
-  padding: 30px 20px;
-  margin-bottom: 20px;
+  padding: 28px 20px;
+  margin-bottom: 18px;
   background: rgba(255, 255, 255, 0.04);
   transition: 0.3s ease;
 }
@@ -366,6 +361,224 @@ button:hover {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.62);
   margin-bottom: 14px;
+}
+
+/* PDF Editor Action Cards */
+.pdf-options {
+  margin: 18px 0 24px;
+  padding: 22px 24px 24px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  text-align: left;
+}
+
+.pdf-action-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.pdf-action-header h3 {
+  font-size: 28px;
+  margin: 6px 0 8px;
+  color: #fff;
+}
+
+.pdf-action-header p:last-child {
+  color: #d7d7d7;
+  font-size: 15px;
+  margin-bottom: 0;
+}
+
+.pdf-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.pdf-action-card {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  padding: 22px;
+  min-height: 150px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pdf-action-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.pdf-action-card.active {
+  border-color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.28);
+}
+
+.pdf-action-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.pdf-action-card strong {
+  display: block;
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.pdf-action-card small {
+  color: #d7d7d7;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pdf-option-group {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.pdf-option-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #f4f4f4;
+}
+
+.pdf-option-group select,
+.pdf-option-group input {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  outline: none;
+  font-size: 15px;
+}
+
+.pdf-option-group input[type="range"] {
+  padding: 0;
+  accent-color: #ffffff;
+}
+
+.pdf-option-group small {
+  display: block;
+  margin-top: 8px;
+  color: #d7d7d7;
+  font-size: 13px;
+}
+
+/* Signature Editor */
+.signature-editor {
+  text-align: left;
+}
+
+.signature-top-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.signature-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 16px 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.signature-toolbar span {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.mini-btn {
+  padding: 10px 16px;
+  font-size: 13px;
+  border-radius: 999px;
+}
+
+.signature-preview-shell {
+  margin-top: 18px;
+  width: 100%;
+  min-height: 360px;
+  border-radius: 22px;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.signature-preview-wrapper {
+  position: relative;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+#pdfSignatureCanvas {
+  display: block;
+  background: #fff;
+}
+
+.signature-draggable {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  width: 150px;
+  height: auto;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  border: 2px dashed rgba(0, 0, 0, 0.45);
+  border-radius: 8px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.signature-draggable:active {
+  cursor: grabbing;
+}
+
+.signature-empty-state {
+  width: 100%;
+  min-height: 320px;
+  border: 2px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 700;
 }
 
 /* Progress Section */
@@ -539,7 +752,7 @@ button:hover {
 
 .note {
   font-size: 14px;
-  margin-top: 20px;
+  margin-top: 18px;
   color: rgba(255, 255, 255, 0.58);
 }
 
@@ -575,10 +788,12 @@ button:hover {
     opacity: 0;
     transform: scale(0.4) translateY(30px);
   }
+
   60% {
     opacity: 1;
     transform: scale(1.08) translateY(0);
   }
+
   100% {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -590,6 +805,7 @@ button:hover {
     opacity: 0;
     transform: translateY(40px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -603,6 +819,16 @@ button:hover {
 }
 
 /* Responsive */
+@media (max-width: 900px) {
+  .pdf-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .signature-top-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 700px) {
   .brand-wrap {
     align-items: flex-start;
@@ -628,6 +854,10 @@ button:hover {
   .logo {
     width: 170px;
   }
+
+  .signature-toolbar {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 600px) {
@@ -637,7 +867,7 @@ button:hover {
 
   .welcome-card,
   .tool-card {
-    padding: 32px 22px;
+    padding: 30px 20px;
   }
 
   .tool-card h2 {
@@ -650,8 +880,28 @@ button:hover {
     font-size: 15px;
   }
 
+  .drop-area {
+    padding: 24px 16px;
+  }
+
   .drop-title {
     font-size: 16px;
+  }
+
+  .pdf-options {
+    padding: 16px;
+  }
+
+  .pdf-action-header h3 {
+    font-size: 24px;
+  }
+
+  .pdf-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pdf-action-card {
+    min-height: 135px;
   }
 
   .preview-box {
@@ -678,145 +928,12 @@ button:hover {
     flex-direction: column;
     gap: 12px;
   }
-}
 
-
-/* PDF Editor Action Cards */
-.pdf-options {
-  margin: 22px 0 26px;
-  padding: 24px;
-  border-radius: 26px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  text-align: left;
-}
-
-.pdf-action-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.pdf-action-header h3 {
-  font-size: 28px;
-  margin: 6px 0 8px;
-  color: #fff;
-}
-
-.pdf-action-header p:last-child {
-  color: #d7d7d7;
-  font-size: 15px;
-  margin-bottom: 0;
-}
-
-.pdf-action-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.pdf-action-card {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 22px;
-  padding: 22px;
-  min-height: 150px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
-}
-
-.pdf-action-card:hover {
-  transform: translateY(-5px);
-  background: rgba(255, 255, 255, 0.13);
-  border-color: rgba(255, 255, 255, 0.28);
-}
-
-.pdf-action-card.active {
-  border-color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.28);
-}
-
-.pdf-action-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.14);
-  font-size: 24px;
-  margin-bottom: 16px;
-}
-
-.pdf-action-card strong {
-  display: block;
-  font-size: 20px;
-  margin-bottom: 8px;
-}
-
-.pdf-action-card small {
-  color: #d7d7d7;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.pdf-option-group {
-  margin-top: 18px;
-  padding: 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.pdf-option-group label {
-  display: block;
-  font-size: 14px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: #f4f4f4;
-}
-
-.pdf-option-group select,
-.pdf-option-group input {
-  width: 100%;
-  padding: 13px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.92);
-  color: #111;
-  outline: none;
-  font-size: 15px;
-}
-
-.pdf-option-group small {
-  display: block;
-  margin-top: 8px;
-  color: #d7d7d7;
-  font-size: 13px;
-}
-
-@media (max-width: 900px) {
-  .pdf-action-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 600px) {
-  .pdf-options {
-    padding: 16px;
+  .signature-preview-shell {
+    min-height: 280px;
   }
 
-  .pdf-action-header h3 {
-    font-size: 24px;
-  }
-
-  .pdf-action-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .pdf-action-card {
-    min-height: 135px;
+  .signature-empty-state {
+    min-height: 230px;
   }
 }

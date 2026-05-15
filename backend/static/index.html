@@ -16,7 +16,6 @@
 
   <div class="video-overlay"></div>
 
-  <!-- Welcome Page -->
   <section id="welcomePage" class="page welcome-page">
     <div class="welcome-card">
       <img src="images/waex-circle.png" alt="WAEX Tools Studio Logo" class="logo" />
@@ -26,13 +25,13 @@
       <h1 class="hero-title">Smart tools for everyday productivity</h1>
 
       <p class="welcome-text">
-        A clean workspace for background removal, document conversion, and more practical tools.
+        A clean workspace for background removal, PDF editing, document conversion, and practical file tools.
       </p>
 
       <div class="hero-badges">
         <span class="hero-badge">Background Remover</span>
-        <span class="hero-badge">DOCX to PDF</span>
-        <span class="hero-badge">More tools coming soon</span>
+        <span class="hero-badge">PDF Editor</span>
+        <span class="hero-badge">Image to PDF</span>
       </div>
 
       <div class="hero-actions">
@@ -42,7 +41,6 @@
     </div>
   </section>
 
-  <!-- Services Page -->
   <section id="servicesPage" class="page services-page hidden">
     <header class="site-header">
       <div class="brand-wrap">
@@ -82,7 +80,7 @@
       <div class="service-card" onclick="openTool('pdf-editor')">
         <div class="service-icon">🧩</div>
         <h3>PDF Editor Tools</h3>
-        <p>Merge, split, delete, rotate, protect, and unlock PDF files.</p>
+        <p>Merge, split, delete, rotate, protect, unlock, and sign PDF files.</p>
       </div>
     </div>
 
@@ -92,7 +90,6 @@
     </footer>
   </section>
 
-  <!-- Tool Page -->
   <section id="toolPage" class="page tool-page hidden">
     <header class="site-header">
       <div class="brand-wrap">
@@ -164,6 +161,12 @@
             <strong>Unlock PDF</strong>
             <small>Remove password if you know it.</small>
           </button>
+
+          <button type="button" class="pdf-action-card" data-action="signature">
+            <span class="pdf-action-icon">✍️</span>
+            <strong>Add Signature</strong>
+            <small>Drag and place your signature freely.</small>
+          </button>
         </div>
 
         <div id="pdfPagesGroup" class="pdf-option-group hidden">
@@ -184,6 +187,46 @@
         <div id="pdfPasswordGroup" class="pdf-option-group hidden">
           <label for="pdfPassword">Password</label>
           <input type="password" id="pdfPassword" placeholder="Enter PDF password" />
+        </div>
+
+        <div id="pdfSignatureGroup" class="pdf-option-group signature-editor hidden">
+          <div class="signature-top-grid">
+            <div>
+              <label for="pdfSignatureImage">Signature Image</label>
+              <input type="file" id="pdfSignatureImage" accept=".png,.jpg,.jpeg,image/png,image/jpeg" />
+              <small>Upload your signature image in PNG, JPG, or JPEG format.</small>
+            </div>
+
+            <div>
+              <label for="pdfSignatureApplyMode">Apply Signature To</label>
+              <select id="pdfSignatureApplyMode">
+                <option value="current">Current preview page only</option>
+                <option value="all">All pages</option>
+              </select>
+              <small>Choose whether to sign one page or all pages.</small>
+            </div>
+          </div>
+
+          <div class="signature-toolbar">
+            <button type="button" id="signaturePrevPage" class="mini-btn">← Previous</button>
+            <span id="signaturePageInfo">Upload a PDF to preview pages</span>
+            <button type="button" id="signatureNextPage" class="mini-btn">Next →</button>
+          </div>
+
+          <label for="pdfSignatureWidthRange">Signature Size</label>
+          <input type="range" id="pdfSignatureWidthRange" min="50" max="320" value="150" />
+          <small>Drag the signature on the PDF preview. Use the slider to resize it.</small>
+
+          <div id="signaturePreviewShell" class="signature-preview-shell">
+            <div id="signaturePreviewWrapper" class="signature-preview-wrapper hidden">
+              <canvas id="pdfSignatureCanvas"></canvas>
+              <img id="signatureDraggable" alt="Signature Preview" class="signature-draggable hidden" />
+            </div>
+
+            <div id="signatureEmptyState" class="signature-empty-state">
+              Upload a PDF and a signature image to start placing your signature.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -242,6 +285,7 @@
     </footer>
   </section>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

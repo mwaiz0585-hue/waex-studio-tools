@@ -684,6 +684,40 @@ def add_signature_pdf():
         print("Add signature PDF error:", e)
         return jsonify({"error": str(e)}), 500
 
+@app.route("/compress-pdf", methods=["POST"])
+def compress_pdf():
+    if "file" not in request.files:
+        return jsonify({"error": "No PDF file uploaded."}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"error": "No selected PDF file."}), 400
+
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Please upload a PDF file."}), 400
+
+    try:
+        reader = read_pdf_from_upload(file)
+        writer = PdfWriter()
+
+        for page in reader.pages:
+            try:
+                page.compress_content_streams()
+            except Exception:
+                pass
+
+            writer.add_page(page)
+
+        writer.add_metadata({})
+
+        original_name = os.path.splitext(file.filename)[0]
+        return send_pdf(writer, f"{original_name}-compressed.pdf")
+
+    except Exception as e:
+        print("Compress PDF error:", e)
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/<path:path>")
 def serve_static(path):

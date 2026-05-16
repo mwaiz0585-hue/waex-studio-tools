@@ -26,7 +26,8 @@ function getPdfActionLabel(action) {
     rotate: "Rotate Pages",
     protect: "Protect PDF",
     unlock: "Unlock PDF",
-    signature: "Add Signature"
+    signature: "Add Signature",
+    compress: "Compress PDF"
   };
 
   return labels[action] || "PDF Editor";
@@ -318,35 +319,50 @@ function updatePdfActionUI() {
     chooseLabel.textContent = "Choose Files";
     dropTitle.textContent = "Drag & Drop Your PDF Files Here";
     note.textContent = "Upload at least 2 PDF files. Hold Ctrl and click multiple PDFs, or drag and drop multiple PDFs.";
-  } else {
+  }
+
+  if (selectedPdfAction === "split") {
     fileInput.multiple = false;
     fileInput.removeAttribute("multiple");
     chooseLabel.textContent = "Choose File";
     dropTitle.textContent = "Drag & Drop Your PDF File Here";
-  }
-
-  if (selectedPdfAction === "split") {
     pagesGroup.classList.remove("hidden");
     note.textContent = "Enter pages to extract. Example: 1,3,5-7";
   }
 
   if (selectedPdfAction === "delete") {
+    fileInput.multiple = false;
+    fileInput.removeAttribute("multiple");
+    chooseLabel.textContent = "Choose File";
+    dropTitle.textContent = "Drag & Drop Your PDF File Here";
     pagesGroup.classList.remove("hidden");
     note.textContent = "Enter pages to delete. Example: 1,3,5-7";
   }
 
   if (selectedPdfAction === "rotate") {
+    fileInput.multiple = false;
+    fileInput.removeAttribute("multiple");
+    chooseLabel.textContent = "Choose File";
+    dropTitle.textContent = "Drag & Drop Your PDF File Here";
     pagesGroup.classList.remove("hidden");
     rotationGroup.classList.remove("hidden");
     note.textContent = "Enter pages to rotate and choose rotation angle.";
   }
 
   if (selectedPdfAction === "protect") {
+    fileInput.multiple = false;
+    fileInput.removeAttribute("multiple");
+    chooseLabel.textContent = "Choose File";
+    dropTitle.textContent = "Drag & Drop Your PDF File Here";
     passwordGroup.classList.remove("hidden");
     note.textContent = "Enter a password to protect the uploaded PDF.";
   }
 
   if (selectedPdfAction === "unlock") {
+    fileInput.multiple = false;
+    fileInput.removeAttribute("multiple");
+    chooseLabel.textContent = "Choose File";
+    dropTitle.textContent = "Drag & Drop Your PDF File Here";
     passwordGroup.classList.remove("hidden");
     note.textContent = "Enter the current PDF password to unlock it.";
   }
@@ -362,38 +378,13 @@ function updatePdfActionUI() {
     dropTitle.textContent = "Drag & Drop Your PDF File Here";
     note.textContent = "Upload a PDF, upload your signature image, drag it into place, then process.";
   }
-}
 
-async function prepareSignaturePdfPreview(file) {
-  if (!file || selectedPdfAction !== "signature") {
-    return;
-  }
-
-  const wrapper = document.getElementById("signaturePreviewWrapper");
-  const emptyState = document.getElementById("signatureEmptyState");
-  const pageInfo = document.getElementById("signaturePageInfo");
-
-  try {
-    if (!window.pdfjsLib) {
-      showStatus("PDF preview library failed to load. Please check your internet connection.", "error");
-      return;
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    signaturePdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    signatureTotalPages = signaturePdfDoc.numPages;
-    signatureCurrentPage = 1;
-
-    wrapper.classList.remove("hidden");
-    emptyState.classList.add("hidden");
-
-    await renderSignaturePage();
-
-    pageInfo.textContent = `Page ${signatureCurrentPage} of ${signatureTotalPages}`;
-    placeSignatureDefault();
-  } catch (error) {
-    console.error(error);
-    showStatus("Unable to preview this PDF. Please try another PDF file.", "error");
+  if (selectedPdfAction === "compress") {
+    fileInput.multiple = false;
+    fileInput.removeAttribute("multiple");
+    chooseLabel.textContent = "Choose File";
+    dropTitle.textContent = "Drag & Drop Your PDF File Here";
+    note.textContent = "Upload one PDF file and compress it.";
   }
 }
 
@@ -1015,7 +1006,8 @@ async function processPdfEditor() {
     rotate: "/rotate-pdf-pages",
     protect: "/protect-pdf",
     unlock: "/unlock-pdf",
-    signature: "/add-signature-pdf"
+    signature: "/add-signature-pdf",
+    compress: "/compress-pdf"
   };
 
   const filenameMap = {
@@ -1025,7 +1017,8 @@ async function processPdfEditor() {
     rotate: "waex-rotated.pdf",
     protect: "waex-protected.pdf",
     unlock: "waex-unlocked.pdf",
-    signature: "waex-signed.pdf"
+    signature: "waex-signed.pdf",
+    compress: "waex-compressed.pdf"
   };
 
   const formData = new FormData();

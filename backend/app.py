@@ -16,6 +16,7 @@ import os
 import tempfile
 import subprocess
 import shutil
+import json
 
 
 app = Flask(__name__, static_folder="static", static_url_path="")
@@ -23,6 +24,10 @@ CORS(app)
 
 print("Starting WAEX backend...")
 
+
+# =========================
+# Utilities
+# =========================
 
 def find_libreoffice():
     possible_paths = [
@@ -130,8 +135,12 @@ try:
     print("Background removal session loaded successfully.")
 except Exception as e:
     bg_session = None
-    print("Failed to initialize background removal session:", e)
+    print("Failed to initialise background removal session:", e)
 
+
+# =========================
+# Static Routes
+# =========================
 
 @app.route("/")
 def serve_index():
@@ -142,6 +151,10 @@ def serve_index():
 def health():
     return jsonify({"status": "ok"})
 
+
+# =========================
+# Background Remover
+# =========================
 
 @app.route("/remove-background", methods=["POST"])
 def remove_background():
@@ -177,6 +190,10 @@ def remove_background():
         print("Background removal error:", e)
         return jsonify({"error": str(e)}), 500
 
+
+# =========================
+# DOCX to PDF
+# =========================
 
 @app.route("/docx-to-pdf", methods=["POST"])
 def docx_to_pdf():
@@ -312,6 +329,10 @@ def docx_to_pdf():
         return jsonify({"error": str(e)}), 500
 
 
+# =========================
+# Image to PDF
+# =========================
+
 @app.route("/image-to-pdf", methods=["POST"])
 def image_to_pdf():
     if "file" not in request.files:
@@ -363,7 +384,7 @@ def image_to_pdf():
 
 
 # =========================
-# PDF EDITOR TOOLS
+# PDF Editor Tools
 # =========================
 
 @app.route("/merge-pdf", methods=["POST"])
@@ -654,7 +675,6 @@ def add_signature_pdf():
                 pdf_signature_width = (signature_display_width / preview_width) * page_width
                 pdf_signature_height = (signature_display_height / preview_height) * page_height
 
-                # Browser y starts from top. PDF y starts from bottom.
                 pdf_y = page_height - ((preview_y + signature_display_height) / preview_height) * page_height
 
                 overlay_stream = io.BytesIO()
@@ -683,6 +703,7 @@ def add_signature_pdf():
     except Exception as e:
         print("Add signature PDF error:", e)
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/compress-pdf", methods=["POST"])
 def compress_pdf():
@@ -716,6 +737,141 @@ def compress_pdf():
 
     except Exception as e:
         print("Compress PDF error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/edit-pdf-text", methods=["POST"])
+def edit_pdf_text():
+    if "file" not in request.files:
+        return jsonify({"error": "No PDF file uploaded."}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"error": "No selected PDF file."}), 400
+
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Please upload a PDF file."}), 400
+
+    edit_items_text = request.form.get("edit_items", "").strip()
+
+    if not edit_items_text:
+        return jsonify({"error": "Please add at least one text box to the PDF."}), 400
+
+    try:
+        edit_items = json.loads(edit_items_text)
+    except Exception:
+        return jsonify({"error": "Invalid edit data received."}), 400
+
+    if not isinstance(edit_items, list) or len(edit_items) == 0:
+        return jsonify({"error": "Please add at least one text box to the PDF."}), 400
+
+    allowed_fonts = {
+        "Helvetica",
+        "Helvetica-Bold",
+        "Times-Roman",
+        "Times-Bold",
+        "Courier",
+        "Courier-Bold"
+    }
+
+    try:
+        reader = read_pdf_from_upload(file)
+        writer = PdfWriter()
+        total_pages = len(reader.pages)
+
+        for page_index, page in enumerate(reader.pages):
+            page_width = float(page.mediabox.width)
+            page_height = float(page.mediabox.height)
+
+            overlay_stream = io.BytesIO()
+            c = canvas.Canvas(overlay_stream, pagesize=(page_width, page_height))
+            has_overlay = False
+
+            for item in edit_items:
+                text = str(item.get("text", "")).strip()
+
+                if not text:
+                    continue
+
+                apply_to = str(item.get("applyTo", "current")).strip().lower()
+
+                try:
+                    item_page = int(item.get("page", 1))
+                except Exception:
+                    item_page = 1
+
+                should_apply = False
+
+                if apply_to == "all":
+                    should_apply = True
+                elif item_page - 1 == page_index:
+                    should_apply = True
+
+                if not should_apply:
+                    continue
+
+                try:
+                    preview_x = float(item.get("x", 0))
+                    preview_y = float(item.get("y", 0))
+                    preview_width = float(item.get("previewWidth", 1))
+                    preview_height = float(item.get("previewHeight", 1))
+                    display_height = float(item.get("displayHeight", 30))
+                    font_size = float(item.get("fontSize", 22))
+                except Exception:
+                    continue
+
+                font_family = str(item.get("fontFamily", "Helvetica")).strip()
+                colour = str(item.get("colour", "#000000")).strip()
+
+                if preview_width <= 0 or preview_height <= 0:
+                    continue
+
+                if font_size <= 0:
+                    font_size = 22
+
+                if font_family not in allowed_fonts:
+                    font_family = "Helvetica"
+
+                if not colour.startswith("#") or len(colour) != 7:
+                    colour = "#000000"
+
+                try:
+                    red = int(colour[1:3], 16) / 255
+                    green = int(colour[3:5], 16) / 255
+                    blue = int(colour[5:7], 16) / 255
+                except Exception:
+                    red, green, blue = 0, 0, 0
+
+                pdf_x = (preview_x / preview_width) * page_width
+                pdf_y = page_height - ((preview_y + display_height * 0.75) / preview_height) * page_height
+                pdf_font_size = (font_size / preview_height) * page_height
+
+                c.setFont(font_family, pdf_font_size)
+                c.setFillColorRGB(red, green, blue)
+
+                lines = text.splitlines() or [text]
+                line_gap = pdf_font_size * 1.2
+
+                for line_index, line in enumerate(lines):
+                    c.drawString(pdf_x, pdf_y - (line_index * line_gap), line)
+
+                has_overlay = True
+
+            c.save()
+            overlay_stream.seek(0)
+
+            if has_overlay:
+                overlay_pdf = PdfReader(overlay_stream)
+                page.merge_page(overlay_pdf.pages[0])
+
+            writer.add_page(page)
+
+        original_name = os.path.splitext(file.filename)[0]
+        return send_pdf(writer, f"{original_name}-edited.pdf")
+
+    except Exception as e:
+        print("Edit PDF text error:", e)
         return jsonify({"error": str(e)}), 500
 
 

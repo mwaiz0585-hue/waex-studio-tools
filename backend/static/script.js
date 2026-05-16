@@ -12,11 +12,23 @@ let signatureDragging = false;
 let signatureDragOffsetX = 0;
 let signatureDragOffsetY = 0;
 
+let editPdfDoc = null;
+let editCurrentPage = 1;
+let editTotalPages = 0;
+let editItems = [];
+let selectedEditItemId = null;
+let editDragging = false;
+let editDragOffsetX = 0;
+let editDragOffsetY = 0;
+let editZoom = 1;
+
+
 function showServices() {
   document.getElementById("welcomePage").classList.add("hidden");
   document.getElementById("servicesPage").classList.remove("hidden");
   document.title = "WAEX Tools Studio | Services";
 }
+
 
 function getPdfActionLabel(action) {
   const labels = {
@@ -27,11 +39,22 @@ function getPdfActionLabel(action) {
     protect: "Protect PDF",
     unlock: "Unlock PDF",
     signature: "Add Signature",
-    compress: "Compress PDF"
+    compress: "Compress PDF",
+    edit: "Edit PDF"
   };
 
   return labels[action] || "PDF Editor";
 }
+
+
+function updateEditFontSizeLabel(value) {
+  const fontSizeValue = document.getElementById("pdfEditFontSizeValue");
+
+  if (fontSizeValue) {
+    fontSizeValue.textContent = `${value}px`;
+  }
+}
+
 
 function resetSignatureEditor() {
   signaturePdfDoc = null;
@@ -46,9 +69,7 @@ function resetSignatureEditor() {
   const widthRange = document.getElementById("pdfSignatureWidthRange");
   const applyMode = document.getElementById("pdfSignatureApplyMode");
 
-  if (signatureInput) {
-    signatureInput.value = "";
-  }
+  if (signatureInput) signatureInput.value = "";
 
   if (signatureImage) {
     signatureImage.src = "";
@@ -69,22 +90,74 @@ function resetSignatureEditor() {
     wrapper.style.height = "";
   }
 
-  if (emptyState) {
-    emptyState.classList.remove("hidden");
-  }
+  if (emptyState) emptyState.classList.remove("hidden");
+  if (pageInfo) pageInfo.textContent = "Upload a PDF to preview pages";
+  if (widthRange) widthRange.value = "150";
+  if (applyMode) applyMode.value = "current";
+}
 
-  if (pageInfo) {
-    pageInfo.textContent = "Upload a PDF to preview pages";
-  }
 
-  if (widthRange) {
-    widthRange.value = "150";
-  }
+function getSelectedEditItem() {
+  return editItems.find(item => item.id === selectedEditItemId) || null;
+}
 
-  if (applyMode) {
-    applyMode.value = "current";
+
+function updateEditZoomLabel() {
+  const zoomLabel = document.getElementById("editZoomLabel");
+
+  if (zoomLabel) {
+    zoomLabel.textContent = `${Math.round(editZoom * 100)}%`;
   }
 }
+
+
+function resetEditEditor() {
+  editPdfDoc = null;
+  editCurrentPage = 1;
+  editTotalPages = 0;
+  editItems = [];
+  selectedEditItemId = null;
+  editZoom = 1;
+
+  updateEditZoomLabel();
+  updateEditFontSizeLabel(22);
+
+  const editTextInput = document.getElementById("pdfEditText");
+  const wrapper = document.getElementById("editPreviewWrapper");
+  const emptyState = document.getElementById("editEmptyState");
+  const pageInfo = document.getElementById("editPageInfo");
+  const fontSize = document.getElementById("pdfEditFontSize");
+  const applyMode = document.getElementById("pdfEditApplyMode");
+  const fontFamily = document.getElementById("pdfEditFontFamily");
+  const colour = document.getElementById("pdfEditColour");
+  const layer = document.getElementById("editLayer");
+  const shell = document.getElementById("editPreviewShell");
+
+  if (editTextInput) editTextInput.value = "";
+  if (fontSize) fontSize.value = "22";
+  if (applyMode) applyMode.value = "current";
+  if (fontFamily) fontFamily.value = "Helvetica";
+  if (colour) colour.value = "#000000";
+  if (layer) layer.innerHTML = "";
+
+  if (wrapper) {
+    wrapper.classList.add("hidden");
+    wrapper.classList.remove("centered-page", "overflow-page");
+    wrapper.style.width = "";
+    wrapper.style.height = "";
+    wrapper.style.marginLeft = "";
+    wrapper.style.marginRight = "";
+  }
+
+  if (shell) {
+    shell.scrollTop = 0;
+    shell.scrollLeft = 0;
+  }
+
+  if (emptyState) emptyState.classList.remove("hidden");
+  if (pageInfo) pageInfo.textContent = "Upload a PDF to preview pages";
+}
+
 
 function resetToolUI() {
   const fileInput = document.getElementById("fileInput");
@@ -106,9 +179,7 @@ function resetToolUI() {
   fileInput.removeAttribute("multiple");
   fileName.textContent = "No file selected";
 
-  if (chooseLabel) {
-    chooseLabel.textContent = "Choose File";
-  }
+  if (chooseLabel) chooseLabel.textContent = "Choose File";
 
   previewSection.classList.add("hidden");
   originalCard.classList.add("hidden");
@@ -120,11 +191,10 @@ function resetToolUI() {
   resultStatusText.textContent = "Ready";
   downloadAgainBtn.classList.add("hidden");
 
-  if (pdfOptions) {
-    pdfOptions.classList.add("hidden");
-  }
+  if (pdfOptions) pdfOptions.classList.add("hidden");
 
   resetSignatureEditor();
+  resetEditEditor();
   hideStatus();
   resetProgress();
 
@@ -133,6 +203,7 @@ function resetToolUI() {
     lastDownloadUrl = "";
   }
 }
+
 
 function openTool(toolName) {
   selectedTool = toolName;
@@ -190,7 +261,7 @@ function openTool(toolName) {
     title.textContent = "PDF Editor Tools";
     description.textContent = "Choose a PDF action and upload your PDF file.";
     fileInput.accept = ".pdf,application/pdf";
-    note.textContent = "Merge, split, delete, rotate, protect, unlock, or sign PDF files.";
+    note.textContent = "Merge, split, delete, rotate, protect, unlock, sign, compress, or edit PDF files.";
     dropTitle.textContent = "Drag & Drop Your PDF Files Here";
     pdfOptions.classList.remove("hidden");
 
@@ -205,12 +276,14 @@ function openTool(toolName) {
   }
 }
 
+
 function goBack() {
   document.getElementById("toolPage").classList.add("hidden");
   document.getElementById("servicesPage").classList.remove("hidden");
   resetToolUI();
   document.title = "WAEX Tools Studio | Services";
 }
+
 
 function showStatus(message, type) {
   const statusMessage = document.getElementById("statusMessage");
@@ -219,11 +292,13 @@ function showStatus(message, type) {
   statusMessage.classList.remove("hidden");
 }
 
+
 function hideStatus() {
   const statusMessage = document.getElementById("statusMessage");
   statusMessage.className = "status-message hidden";
   statusMessage.textContent = "";
 }
+
 
 function setButtonLoading(isLoading, text) {
   const uploadButton = document.querySelector(".upload-btn");
@@ -239,6 +314,7 @@ function setButtonLoading(isLoading, text) {
     spinner.classList.add("hidden");
   }
 }
+
 
 function startFakeProgress(labelText = "Processing file...") {
   const progressSection = document.getElementById("progressSection");
@@ -264,6 +340,7 @@ function startFakeProgress(labelText = "Processing file...") {
   }, 250);
 }
 
+
 function completeProgress(labelText = "Completed") {
   const progressLabel = document.getElementById("progressLabel");
   const progressPercent = document.getElementById("progressPercent");
@@ -274,6 +351,7 @@ function completeProgress(labelText = "Completed") {
   progressFill.style.width = "100%";
   progressPercent.textContent = "100%";
 }
+
 
 function resetProgress() {
   const progressSection = document.getElementById("progressSection");
@@ -288,6 +366,7 @@ function resetProgress() {
   progressFill.style.width = "0%";
 }
 
+
 function updatePdfActionUI() {
   const fileInput = document.getElementById("fileInput");
   const fileName = document.getElementById("fileName");
@@ -295,6 +374,7 @@ function updatePdfActionUI() {
   const rotationGroup = document.getElementById("pdfRotationGroup");
   const passwordGroup = document.getElementById("pdfPasswordGroup");
   const signatureGroup = document.getElementById("pdfSignatureGroup");
+  const editGroup = document.getElementById("pdfEditGroup");
   const note = document.querySelector(".note");
   const dropTitle = document.querySelector(".drop-title");
   const chooseLabel = document.querySelector(".custom-file-upload");
@@ -303,15 +383,16 @@ function updatePdfActionUI() {
   rotationGroup.classList.add("hidden");
   passwordGroup.classList.add("hidden");
 
-  if (signatureGroup) {
-    signatureGroup.classList.add("hidden");
-  }
+  if (signatureGroup) signatureGroup.classList.add("hidden");
+  if (editGroup) editGroup.classList.add("hidden");
 
   fileInput.accept = ".pdf,application/pdf";
   fileInput.value = "";
   fileName.textContent = "No file selected";
+
   hideStatus();
   resetSignatureEditor();
+  resetEditEditor();
 
   if (selectedPdfAction === "merge") {
     fileInput.multiple = true;
@@ -368,9 +449,7 @@ function updatePdfActionUI() {
   }
 
   if (selectedPdfAction === "signature") {
-    if (signatureGroup) {
-      signatureGroup.classList.remove("hidden");
-    }
+    if (signatureGroup) signatureGroup.classList.remove("hidden");
 
     fileInput.multiple = false;
     fileInput.removeAttribute("multiple");
@@ -386,12 +465,53 @@ function updatePdfActionUI() {
     dropTitle.textContent = "Drag & Drop Your PDF File Here";
     note.textContent = "Upload one PDF file and compress it.";
   }
+
+  if (selectedPdfAction === "edit") {
+    if (editGroup) editGroup.classList.remove("hidden");
+
+    fileInput.multiple = false;
+    fileInput.removeAttribute("multiple");
+    chooseLabel.textContent = "Choose PDF";
+    dropTitle.textContent = "Drag & Drop Your PDF File Here";
+    note.textContent = "Upload a PDF, add text boxes, customise them, then process.";
+  }
 }
 
-async function renderSignaturePage() {
-  if (!signaturePdfDoc) {
-    return;
+
+async function prepareSignaturePdfPreview(file) {
+  if (!file || selectedPdfAction !== "signature") return;
+
+  const wrapper = document.getElementById("signaturePreviewWrapper");
+  const emptyState = document.getElementById("signatureEmptyState");
+  const pageInfo = document.getElementById("signaturePageInfo");
+
+  try {
+    if (!window.pdfjsLib) {
+      showStatus("PDF preview library failed to load. Please check your internet connection.", "error");
+      return;
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    signaturePdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    signatureTotalPages = signaturePdfDoc.numPages;
+    signatureCurrentPage = 1;
+
+    wrapper.classList.remove("hidden");
+    emptyState.classList.add("hidden");
+
+    await renderSignaturePage();
+
+    pageInfo.textContent = `Page ${signatureCurrentPage} of ${signatureTotalPages}`;
+    placeSignatureDefault();
+  } catch (error) {
+    console.error(error);
+    showStatus("Unable to preview this PDF. Please try another PDF file.", "error");
   }
+}
+
+
+async function renderSignaturePage() {
+  if (!signaturePdfDoc) return;
 
   const canvas = document.getElementById("pdfSignatureCanvas");
   const wrapper = document.getElementById("signaturePreviewWrapper");
@@ -423,13 +543,12 @@ async function renderSignaturePage() {
   placeSignatureDefault();
 }
 
+
 function placeSignatureDefault() {
   const signature = document.getElementById("signatureDraggable");
   const wrapper = document.getElementById("signaturePreviewWrapper");
 
-  if (!signature || signature.classList.contains("hidden") || wrapper.classList.contains("hidden")) {
-    return;
-  }
+  if (!signature || signature.classList.contains("hidden") || wrapper.classList.contains("hidden")) return;
 
   const sigWidth = signature.offsetWidth || 150;
   const sigHeight = signature.offsetHeight || 60;
@@ -440,6 +559,7 @@ function placeSignatureDefault() {
   signature.style.left = `${left}px`;
   signature.style.top = `${top}px`;
 }
+
 
 function handleSignatureImageChange() {
   const signatureInput = document.getElementById("pdfSignatureImage");
@@ -460,9 +580,7 @@ function handleSignatureImageChange() {
     return;
   }
 
-  if (signatureImageUrl) {
-    URL.revokeObjectURL(signatureImageUrl);
-  }
+  if (signatureImageUrl) URL.revokeObjectURL(signatureImageUrl);
 
   signatureImageUrl = URL.createObjectURL(file);
   signature.src = signatureImageUrl;
@@ -474,23 +592,398 @@ function handleSignatureImageChange() {
   };
 }
 
+
 function updateSignatureSize() {
   const signature = document.getElementById("signatureDraggable");
   const widthRange = document.getElementById("pdfSignatureWidthRange");
+  const wrapper = document.getElementById("signaturePreviewWrapper");
 
-  if (!signature) {
-    return;
-  }
+  if (!signature || !wrapper) return;
 
   signature.style.width = `${widthRange.value}px`;
 
-  const wrapper = document.getElementById("signaturePreviewWrapper");
   const left = Math.min(signature.offsetLeft, wrapper.clientWidth - signature.offsetWidth);
   const top = Math.min(signature.offsetTop, wrapper.clientHeight - signature.offsetHeight);
 
   signature.style.left = `${Math.max(0, left)}px`;
   signature.style.top = `${Math.max(0, top)}px`;
 }
+
+
+async function prepareEditPdfPreview(file) {
+  if (!file || selectedPdfAction !== "edit") return;
+
+  const wrapper = document.getElementById("editPreviewWrapper");
+  const emptyState = document.getElementById("editEmptyState");
+  const pageInfo = document.getElementById("editPageInfo");
+  const shell = document.getElementById("editPreviewShell");
+
+  try {
+    if (!window.pdfjsLib) {
+      showStatus("PDF preview library failed to load. Please check your internet connection.", "error");
+      return;
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    editPdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    editTotalPages = editPdfDoc.numPages;
+    editCurrentPage = 1;
+    editItems = [];
+    selectedEditItemId = null;
+    editZoom = 1;
+
+    updateEditZoomLabel();
+    updateEditFontSizeLabel(22);
+
+    wrapper.classList.remove("hidden");
+    emptyState.classList.add("hidden");
+
+    await renderEditPage({ resetScroll: true });
+
+    if (shell) {
+      shell.scrollTop = 0;
+      shell.scrollLeft = 0;
+    }
+
+    pageInfo.textContent = `Page ${editCurrentPage} of ${editTotalPages}`;
+  } catch (error) {
+    console.error(error);
+    showStatus("Unable to preview this PDF. Please try another PDF file.", "error");
+  }
+}
+
+
+async function renderEditPage(options = {}) {
+  if (!editPdfDoc) return;
+
+  const shouldResetScroll = options.resetScroll === true;
+
+  const canvas = document.getElementById("pdfEditCanvas");
+  const wrapper = document.getElementById("editPreviewWrapper");
+  const pageInfo = document.getElementById("editPageInfo");
+  const shell = document.getElementById("editPreviewShell");
+
+  const oldScrollLeft = shell ? shell.scrollLeft : 0;
+  const oldScrollTop = shell ? shell.scrollTop : 0;
+
+  const page = await editPdfDoc.getPage(editCurrentPage);
+
+  const baseViewport = page.getViewport({ scale: 1 });
+  const shellWidth = shell ? shell.clientWidth : 820;
+  const maxWidth = Math.max(320, shellWidth - 32);
+
+  const baseScale = Math.max(0.4, Math.min(maxWidth / baseViewport.width, 1.35));
+  const scale = baseScale * editZoom;
+  const viewport = page.getViewport({ scale });
+
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+
+  wrapper.style.width = `${canvas.width}px`;
+  wrapper.style.height = `${canvas.height}px`;
+
+  wrapper.classList.remove("centered-page", "overflow-page");
+
+  if (shell && canvas.width > shell.clientWidth - 32) {
+    wrapper.classList.add("overflow-page");
+  } else {
+    wrapper.classList.add("centered-page");
+  }
+
+  const context = canvas.getContext("2d");
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  await page.render({
+    canvasContext: context,
+    viewport: viewport
+  }).promise;
+
+  pageInfo.textContent = `Page ${editCurrentPage} of ${editTotalPages}`;
+
+  updateEditZoomLabel();
+  renderEditItemsForCurrentPage();
+
+  if (shell) {
+    if (shouldResetScroll) {
+      shell.scrollTop = 0;
+      shell.scrollLeft = 0;
+    } else {
+      shell.scrollTop = oldScrollTop;
+      shell.scrollLeft = oldScrollLeft;
+    }
+  }
+}
+
+
+async function changeEditZoom(amount) {
+  if (!editPdfDoc) {
+    showStatus("Please upload a PDF first.", "error");
+    return;
+  }
+
+  editZoom = Math.max(0.5, Math.min(3, editZoom + amount));
+  await renderEditPage();
+}
+
+
+async function resetEditZoom() {
+  if (!editPdfDoc) {
+    showStatus("Please upload a PDF first.", "error");
+    return;
+  }
+
+  editZoom = 1;
+  await renderEditPage({ resetScroll: true });
+}
+
+
+async function toggleEditFullscreen() {
+  const editGroup = document.getElementById("pdfEditGroup");
+  const fullscreenBtn = document.getElementById("editFullscreenBtn");
+  const shell = document.getElementById("editPreviewShell");
+
+  if (!editGroup) {
+    return;
+  }
+
+  const enteringFullscreen = !editGroup.classList.contains("editor-fullscreen");
+
+  editGroup.classList.toggle("editor-fullscreen", enteringFullscreen);
+  document.body.classList.toggle("editor-fullscreen-lock", enteringFullscreen);
+
+  if (fullscreenBtn) {
+    fullscreenBtn.textContent = enteringFullscreen ? "✕ Exit Full Screen" : "⛶ Full Screen";
+  }
+
+  window.scrollTo(0, 0);
+
+  if (editPdfDoc) {
+    setTimeout(async () => {
+      await renderEditPage({ resetScroll: true });
+
+      if (shell) {
+        shell.scrollTop = 0;
+        shell.scrollLeft = 0;
+        shell.focus();
+      }
+    }, 250);
+  }
+}
+
+
+function createEditItem() {
+  if (!editPdfDoc) {
+    showStatus("Please upload a PDF first.", "error");
+    return;
+  }
+
+  const canvas = document.getElementById("pdfEditCanvas");
+
+  const item = {
+    id: `edit-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    text: "Your Text",
+    page: editCurrentPage,
+    applyTo: "current",
+    x: 40,
+    y: 40,
+    previewWidth: canvas.width,
+    previewHeight: canvas.height,
+    displayHeight: 34,
+    fontSize: 22,
+    fontFamily: "Helvetica",
+    colour: "#000000"
+  };
+
+  editItems.push(item);
+  selectedEditItemId = item.id;
+
+  renderEditItemsForCurrentPage();
+  loadSelectedEditItemToPanel();
+}
+
+
+function renderEditItemsForCurrentPage() {
+  const layer = document.getElementById("editLayer");
+
+  if (!layer) return;
+
+  layer.innerHTML = "";
+
+  const visibleItems = editItems.filter(item => {
+    return item.applyTo === "all" || item.page === editCurrentPage;
+  });
+
+  visibleItems.forEach(item => {
+    const box = document.createElement("div");
+    box.className = "edit-text-box";
+    box.dataset.id = item.id;
+    box.textContent = item.text || "Your Text";
+
+    if (item.id === selectedEditItemId) box.classList.add("selected");
+
+    const scaledX = (item.x / item.previewWidth) * layer.clientWidth;
+    const scaledY = (item.y / item.previewHeight) * layer.clientHeight;
+
+    box.style.left = `${scaledX}px`;
+    box.style.top = `${scaledY}px`;
+    box.style.fontSize = `${item.fontSize}px`;
+    box.style.color = item.colour || "#000000";
+
+    const fontMap = {
+      "Helvetica": "Arial, sans-serif",
+      "Helvetica-Bold": "Arial, sans-serif",
+      "Times-Roman": '"Times New Roman", serif',
+      "Times-Bold": '"Times New Roman", serif',
+      "Courier": '"Courier New", monospace',
+      "Courier-Bold": '"Courier New", monospace'
+    };
+
+    box.style.fontFamily = fontMap[item.fontFamily] || "Arial, sans-serif";
+
+    if (item.fontFamily.includes("Bold")) {
+      box.style.fontWeight = "700";
+    } else {
+      box.style.fontWeight = "400";
+    }
+
+    box.addEventListener("pointerdown", function (e) {
+      selectedEditItemId = item.id;
+      loadSelectedEditItemToPanel();
+      renderEditItemsForCurrentPage();
+
+      setTimeout(() => {
+        const selectedBox = document.querySelector(`.edit-text-box[data-id="${item.id}"]`);
+        if (!selectedBox) return;
+
+        const boxRect = selectedBox.getBoundingClientRect();
+
+        editDragging = true;
+        editDragOffsetX = e.clientX - boxRect.left;
+        editDragOffsetY = e.clientY - boxRect.top;
+
+        selectedBox.setPointerCapture(e.pointerId);
+      }, 0);
+
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    box.addEventListener("pointermove", function (e) {
+      if (!editDragging || selectedEditItemId !== item.id) return;
+
+      const wrapper = document.getElementById("editPreviewWrapper");
+      const wrapperRect = wrapper.getBoundingClientRect();
+
+      let newLeft = e.clientX - wrapperRect.left - editDragOffsetX;
+      let newTop = e.clientY - wrapperRect.top - editDragOffsetY;
+
+      newLeft = Math.max(0, Math.min(newLeft, wrapper.clientWidth - box.offsetWidth));
+      newTop = Math.max(0, Math.min(newTop, wrapper.clientHeight - box.offsetHeight));
+
+      box.style.left = `${newLeft}px`;
+      box.style.top = `${newTop}px`;
+
+      item.x = newLeft;
+      item.y = newTop;
+      item.previewWidth = wrapper.clientWidth;
+      item.previewHeight = wrapper.clientHeight;
+      item.displayHeight = box.offsetHeight;
+    });
+
+    box.addEventListener("pointerup", function () {
+      editDragging = false;
+    });
+
+    box.addEventListener("pointercancel", function () {
+      editDragging = false;
+    });
+
+    layer.appendChild(box);
+
+    item.x = scaledX;
+    item.y = scaledY;
+    item.previewWidth = layer.clientWidth;
+    item.previewHeight = layer.clientHeight;
+    item.displayHeight = box.offsetHeight;
+  });
+}
+
+
+function loadSelectedEditItemToPanel() {
+  const item = getSelectedEditItem();
+
+  const textInput = document.getElementById("pdfEditText");
+  const applyMode = document.getElementById("pdfEditApplyMode");
+  const fontFamily = document.getElementById("pdfEditFontFamily");
+  const fontSize = document.getElementById("pdfEditFontSize");
+  const colour = document.getElementById("pdfEditColour");
+
+  if (!textInput || !applyMode || !fontFamily || !fontSize || !colour) return;
+
+  if (!item) {
+    textInput.value = "";
+    applyMode.value = "current";
+    fontFamily.value = "Helvetica";
+    fontSize.value = "22";
+    colour.value = "#000000";
+    updateEditFontSizeLabel(22);
+    return;
+  }
+
+  textInput.value = item.text;
+  applyMode.value = item.applyTo;
+  fontFamily.value = item.fontFamily;
+  fontSize.value = String(item.fontSize);
+  colour.value = item.colour;
+
+  updateEditFontSizeLabel(item.fontSize);
+}
+
+
+function updateSelectedEditItemFromPanel() {
+  const item = getSelectedEditItem();
+
+  if (!item) return;
+
+  const textInput = document.getElementById("pdfEditText");
+  const applyMode = document.getElementById("pdfEditApplyMode");
+  const fontFamily = document.getElementById("pdfEditFontFamily");
+  const fontSize = document.getElementById("pdfEditFontSize");
+  const colour = document.getElementById("pdfEditColour");
+
+  item.text = textInput.value || "Your Text";
+  item.applyTo = applyMode.value;
+  item.fontFamily = fontFamily.value;
+  item.fontSize = Number(fontSize.value) || 22;
+  item.colour = colour.value || "#000000";
+
+  updateEditFontSizeLabel(item.fontSize);
+  renderEditItemsForCurrentPage();
+}
+
+
+function deleteSelectedEditItem() {
+  if (!selectedEditItemId) {
+    showStatus("Please select a text box to delete.", "error");
+    return;
+  }
+
+  editItems = editItems.filter(item => item.id !== selectedEditItemId);
+  selectedEditItemId = null;
+
+  renderEditItemsForCurrentPage();
+  loadSelectedEditItemToPanel();
+}
+
+
+function clearAllEditItems() {
+  editItems = [];
+  selectedEditItemId = null;
+
+  renderEditItemsForCurrentPage();
+  loadSelectedEditItemToPanel();
+}
+
 
 function handleSelectedFile() {
   const fileInput = document.getElementById("fileInput");
@@ -518,6 +1011,7 @@ function handleSelectedFile() {
     resultInfoCard.classList.add("hidden");
     downloadAgainBtn.classList.add("hidden");
     resetSignatureEditor();
+    resetEditEditor();
     return;
   }
 
@@ -578,6 +1072,10 @@ function handleSelectedFile() {
       prepareSignaturePdfPreview(file);
     }
 
+    if (selectedPdfAction === "edit") {
+      prepareEditPdfPreview(file);
+    }
+
     return;
   }
 
@@ -604,6 +1102,7 @@ function handleSelectedFile() {
   }
 }
 
+
 function triggerDownload(url, filename) {
   const a = document.createElement("a");
   a.href = url;
@@ -613,6 +1112,7 @@ function triggerDownload(url, filename) {
   a.remove();
 }
 
+
 function getErrorMessageFromResponse(responseText, fallback) {
   try {
     const errorJson = JSON.parse(responseText);
@@ -620,12 +1120,11 @@ function getErrorMessageFromResponse(responseText, fallback) {
     if (errorJson && errorJson.error) {
       return errorJson.error;
     }
-  } catch (jsonError) {
-    // Use fallback below.
-  }
+  } catch (jsonError) {}
 
   return responseText || fallback;
 }
+
 
 document.addEventListener("DOMContentLoaded", function () {
   if (window.pdfjsLib) {
@@ -646,6 +1145,32 @@ document.addEventListener("DOMContentLoaded", function () {
   const signature = document.getElementById("signatureDraggable");
   const wrapper = document.getElementById("signaturePreviewWrapper");
 
+  const editTextInput = document.getElementById("pdfEditText");
+  const editApplyMode = document.getElementById("pdfEditApplyMode");
+  const editFontSize = document.getElementById("pdfEditFontSize");
+  const editFontFamily = document.getElementById("pdfEditFontFamily");
+  const editColour = document.getElementById("pdfEditColour");
+  const editPrevPageBtn = document.getElementById("editPrevPage");
+  const editNextPageBtn = document.getElementById("editNextPage");
+  const addEditTextBtn = document.getElementById("addEditTextBtn");
+  const deleteEditTextBtn = document.getElementById("deleteEditTextBtn");
+  const clearEditTextBtn = document.getElementById("clearEditTextBtn");
+
+  const editZoomOutBtn = document.getElementById("editZoomOutBtn");
+  const editZoomInBtn = document.getElementById("editZoomInBtn");
+  const editZoomResetBtn = document.getElementById("editZoomResetBtn");
+  const editFullscreenBtn = document.getElementById("editFullscreenBtn");
+  const editSaveBtn = document.getElementById("editSaveBtn");
+  const editPreviewShell = document.getElementById("editPreviewShell");
+
+  if (editFontSize) {
+    updateEditFontSizeLabel(editFontSize.value);
+
+    editFontSize.addEventListener("input", function () {
+      updateEditFontSizeLabel(editFontSize.value);
+    });
+  }
+
   pdfActionCards.forEach(card => {
     card.addEventListener("click", function () {
       selectedPdfAction = card.dataset.action;
@@ -661,19 +1186,12 @@ document.addEventListener("DOMContentLoaded", function () {
     handleSelectedFile();
   });
 
-  if (signatureInput) {
-    signatureInput.addEventListener("change", handleSignatureImageChange);
-  }
-
-  if (widthRange) {
-    widthRange.addEventListener("input", updateSignatureSize);
-  }
+  if (signatureInput) signatureInput.addEventListener("change", handleSignatureImageChange);
+  if (widthRange) widthRange.addEventListener("input", updateSignatureSize);
 
   if (prevPageBtn) {
     prevPageBtn.addEventListener("click", async function () {
-      if (!signaturePdfDoc || signatureCurrentPage <= 1) {
-        return;
-      }
+      if (!signaturePdfDoc || signatureCurrentPage <= 1) return;
 
       signatureCurrentPage -= 1;
       await renderSignaturePage();
@@ -682,9 +1200,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (nextPageBtn) {
     nextPageBtn.addEventListener("click", async function () {
-      if (!signaturePdfDoc || signatureCurrentPage >= signatureTotalPages) {
-        return;
-      }
+      if (!signaturePdfDoc || signatureCurrentPage >= signatureTotalPages) return;
 
       signatureCurrentPage += 1;
       await renderSignaturePage();
@@ -704,9 +1220,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     signature.addEventListener("pointermove", function (e) {
-      if (!signatureDragging) {
-        return;
-      }
+      if (!signatureDragging) return;
 
       const wrapperRect = wrapper.getBoundingClientRect();
 
@@ -729,6 +1243,85 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  if (addEditTextBtn) addEditTextBtn.addEventListener("click", createEditItem);
+  if (deleteEditTextBtn) deleteEditTextBtn.addEventListener("click", deleteSelectedEditItem);
+  if (clearEditTextBtn) clearEditTextBtn.addEventListener("click", clearAllEditItems);
+
+  if (editZoomOutBtn) {
+    editZoomOutBtn.addEventListener("click", async function () {
+      await changeEditZoom(-0.1);
+    });
+  }
+
+  if (editZoomInBtn) {
+    editZoomInBtn.addEventListener("click", async function () {
+      await changeEditZoom(0.1);
+    });
+  }
+
+  if (editZoomResetBtn) {
+    editZoomResetBtn.addEventListener("click", resetEditZoom);
+  }
+
+  if (editFullscreenBtn) {
+    editFullscreenBtn.addEventListener("click", toggleEditFullscreen);
+  }
+
+  if (editSaveBtn) {
+    editSaveBtn.addEventListener("click", async function () {
+      await processPdfEditor();
+    });
+  }
+
+  if (editPreviewShell) {
+    editPreviewShell.setAttribute("tabindex", "0");
+
+    editPreviewShell.addEventListener("wheel", function (e) {
+      if (!document.body.classList.contains("editor-fullscreen-lock")) {
+        return;
+      }
+
+      e.preventDefault();
+
+      if (e.shiftKey) {
+        editPreviewShell.scrollLeft += e.deltaY;
+        return;
+      }
+
+      editPreviewShell.scrollTop += e.deltaY;
+      editPreviewShell.scrollLeft += e.deltaX;
+    }, { passive: false });
+  }
+
+  [editTextInput, editApplyMode, editFontSize, editFontFamily, editColour].forEach(control => {
+    if (control) {
+      control.addEventListener("input", updateSelectedEditItemFromPanel);
+      control.addEventListener("change", updateSelectedEditItemFromPanel);
+    }
+  });
+
+  if (editPrevPageBtn) {
+    editPrevPageBtn.addEventListener("click", async function () {
+      if (!editPdfDoc || editCurrentPage <= 1) return;
+
+      editCurrentPage -= 1;
+      selectedEditItemId = null;
+      await renderEditPage({ resetScroll: true });
+      loadSelectedEditItemToPanel();
+    });
+  }
+
+  if (editNextPageBtn) {
+    editNextPageBtn.addEventListener("click", async function () {
+      if (!editPdfDoc || editCurrentPage >= editTotalPages) return;
+
+      editCurrentPage += 1;
+      selectedEditItemId = null;
+      await renderEditPage({ resetScroll: true });
+      loadSelectedEditItemToPanel();
+    });
+  }
+
   ["dragenter", "dragover"].forEach(eventName => {
     dropArea.addEventListener(eventName, function (e) {
       e.preventDefault();
@@ -748,9 +1341,7 @@ document.addEventListener("DOMContentLoaded", function () {
   dropArea.addEventListener("drop", function (e) {
     const droppedFiles = e.dataTransfer.files;
 
-    if (!droppedFiles || droppedFiles.length === 0) {
-      return;
-    }
+    if (!droppedFiles || droppedFiles.length === 0) return;
 
     const dataTransfer = new DataTransfer();
 
@@ -802,6 +1393,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+
 async function removeBackground(file) {
   const formData = new FormData();
   formData.append("file", file);
@@ -832,9 +1424,7 @@ async function removeBackground(file) {
 
     const blob = await response.blob();
 
-    if (lastDownloadUrl) {
-      URL.revokeObjectURL(lastDownloadUrl);
-    }
+    if (lastDownloadUrl) URL.revokeObjectURL(lastDownloadUrl);
 
     const downloadUrl = window.URL.createObjectURL(blob);
     lastDownloadUrl = downloadUrl;
@@ -863,6 +1453,7 @@ async function removeBackground(file) {
     setButtonLoading(false, "Upload & Process");
   }
 }
+
 
 async function convertImageToPdf(file) {
   const formData = new FormData();
@@ -905,6 +1496,7 @@ async function convertImageToPdf(file) {
   }
 }
 
+
 async function convertDocxToPdf(file) {
   const formData = new FormData();
   formData.append("file", file);
@@ -946,6 +1538,7 @@ async function convertDocxToPdf(file) {
     setButtonLoading(false, "Upload & Process");
   }
 }
+
 
 async function processPdfEditor() {
   const fileInput = document.getElementById("fileInput");
@@ -999,6 +1592,18 @@ async function processPdfEditor() {
     }
   }
 
+  if (action === "edit") {
+    if (!editPdfDoc) {
+      showStatus("Please wait for the PDF preview to load.", "error");
+      return;
+    }
+
+    if (editItems.length === 0) {
+      showStatus("Please add at least one text box.", "error");
+      return;
+    }
+  }
+
   const endpointMap = {
     merge: "/merge-pdf",
     split: "/split-pdf",
@@ -1007,7 +1612,8 @@ async function processPdfEditor() {
     protect: "/protect-pdf",
     unlock: "/unlock-pdf",
     signature: "/add-signature-pdf",
-    compress: "/compress-pdf"
+    compress: "/compress-pdf",
+    edit: "/edit-pdf-text"
   };
 
   const filenameMap = {
@@ -1018,7 +1624,8 @@ async function processPdfEditor() {
     protect: "waex-protected.pdf",
     unlock: "waex-unlocked.pdf",
     signature: "waex-signed.pdf",
-    compress: "waex-compressed.pdf"
+    compress: "waex-compressed.pdf",
+    edit: "waex-edited.pdf"
   };
 
   const formData = new FormData();
@@ -1053,6 +1660,10 @@ async function processPdfEditor() {
     formData.append("preview_height", String(signatureCanvas.height));
     formData.append("signature_display_width", String(signatureElement.offsetWidth));
     formData.append("signature_display_height", String(signatureElement.offsetHeight));
+  }
+
+  if (action === "edit") {
+    formData.append("edit_items", JSON.stringify(editItems));
   }
 
   hideStatus();

@@ -10,7 +10,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Background Video */
 .background-video {
   position: fixed;
   top: 0;
@@ -49,7 +48,6 @@ body {
   margin-bottom: 10px;
 }
 
-/* Header */
 .site-header {
   max-width: 1200px;
   margin: 0 auto 24px;
@@ -83,7 +81,6 @@ body {
   color: rgba(255, 255, 255, 0.72);
 }
 
-/* Welcome Page */
 .welcome-page {
   display: flex;
   justify-content: center;
@@ -150,7 +147,6 @@ body {
   flex-wrap: wrap;
 }
 
-/* Buttons */
 button {
   background: linear-gradient(135deg, #ffffff, #d9d9d9);
   color: #111;
@@ -187,7 +183,6 @@ button:hover {
   transform: translateY(-2px);
 }
 
-/* Services */
 .services-page {
   background: transparent;
 }
@@ -259,7 +254,6 @@ button:hover {
   line-height: 1.6;
 }
 
-/* Tool Page */
 .tool-page {
   display: flex;
   justify-content: center;
@@ -304,7 +298,6 @@ button:hover {
   margin-bottom: 16px;
 }
 
-/* Custom file upload */
 .custom-file-upload {
   display: inline-block;
   padding: 14px 28px;
@@ -329,7 +322,6 @@ button:hover {
   word-break: break-word;
 }
 
-/* Drag & Drop Area */
 .drop-area {
   border: 2px dashed rgba(255, 255, 255, 0.16);
   border-radius: 22px;
@@ -363,7 +355,6 @@ button:hover {
   margin-bottom: 14px;
 }
 
-/* PDF Editor Action Cards */
 .pdf-options {
   margin: 18px 0 24px;
   padding: 22px 24px 24px;
@@ -484,8 +475,8 @@ button:hover {
   font-size: 13px;
 }
 
-/* Signature Editor */
-.signature-editor {
+.signature-editor,
+.pdf-edit-group {
   text-align: left;
 }
 
@@ -541,9 +532,11 @@ button:hover {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  flex: 0 0 auto;
 }
 
-#pdfSignatureCanvas {
+#pdfSignatureCanvas,
+#pdfEditCanvas {
   display: block;
   background: #fff;
 }
@@ -581,7 +574,205 @@ button:hover {
   font-weight: 700;
 }
 
-/* Progress Section */
+.edit-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.edit-toolbar-left,
+.edit-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.edit-zoom-label {
+  min-width: 56px;
+  text-align: center;
+  padding: 9px 12px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.danger-mini-btn {
+  background: rgba(255, 120, 120, 0.9);
+  color: #111;
+}
+
+.save-mini-btn {
+  background: rgba(130, 255, 180, 0.95);
+  color: #111;
+}
+
+.edit-main-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 18px;
+  align-items: start;
+}
+
+.edit-canvas-area {
+  min-width: 0;
+}
+
+.edit-preview-shell {
+  display: block;
+  justify-content: initial;
+  align-items: initial;
+  overflow: auto;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.edit-preview-wrapper {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.edit-side-panel {
+  position: sticky;
+  top: 18px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.edit-side-panel h3 {
+  color: #fff;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.edit-side-panel p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.edit-side-panel label {
+  margin-top: 12px;
+}
+
+.edit-side-panel textarea {
+  width: 100%;
+  min-height: 86px;
+  resize: vertical;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  outline: none;
+  font-size: 15px;
+}
+
+.edit-side-panel input[type="color"] {
+  height: 44px;
+  padding: 5px;
+}
+
+#editLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.edit-text-box {
+  position: absolute;
+  min-width: 80px;
+  max-width: 85%;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px dashed rgba(0, 0, 0, 0.45);
+  border-radius: 8px;
+  color: #111;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  pointer-events: auto;
+}
+
+.edit-text-box.selected {
+  border: 2px solid #1e90ff;
+  box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.22);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.edit-text-box:active {
+  cursor: grabbing;
+}
+
+.editor-fullscreen-lock {
+  overflow: hidden;
+}
+
+.pdf-edit-group.editor-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  margin: 0;
+  padding: 18px;
+  border-radius: 0;
+  overflow: hidden;
+  background: rgba(45, 45, 48, 0.98);
+  backdrop-filter: blur(18px);
+}
+
+.pdf-edit-group.editor-fullscreen .edit-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 14px;
+  margin-bottom: 16px;
+  border-radius: 18px;
+  background: rgba(35, 35, 38, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.pdf-edit-group.editor-fullscreen .edit-main-layout {
+  max-width: 1700px;
+  height: calc(100vh - 98px);
+  margin: 0 auto;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  overflow: hidden;
+}
+
+.pdf-edit-group.editor-fullscreen .edit-canvas-area {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pdf-edit-group.editor-fullscreen .edit-preview-shell {
+  height: calc(100vh - 190px);
+  min-height: 0;
+  overflow: auto;
+  display: block;
+  justify-content: initial;
+  align-items: initial;
+}
+
+.pdf-edit-group.editor-fullscreen .signature-toolbar {
+  margin-top: 0;
+}
+
+.pdf-edit-group.editor-fullscreen .edit-side-panel {
+  top: 0;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
 .progress-section {
   margin: 22px 0;
   text-align: left;
@@ -613,7 +804,6 @@ button:hover {
   transition: width 0.25s ease;
 }
 
-/* Preview Section */
 .preview-section {
   margin: 24px 0 28px;
   display: grid;
@@ -665,7 +855,6 @@ button:hover {
   background-position: 0 0, 0 11px, 11px -11px, -11px 0px;
 }
 
-/* Result Info */
 .result-info {
   margin-top: 14px;
   background: rgba(255, 255, 255, 0.07);
@@ -691,7 +880,6 @@ button:hover {
   color: #fff;
 }
 
-/* Secondary Button */
 .secondary-btn {
   width: 100%;
   margin-top: 14px;
@@ -704,7 +892,6 @@ button:hover {
   background: rgba(255, 255, 255, 0.16);
 }
 
-/* Upload Button */
 .upload-btn {
   width: 100%;
   min-height: 58px;
@@ -728,7 +915,6 @@ button:hover {
   animation: spin 0.8s linear infinite;
 }
 
-/* Status Message */
 .status-message {
   margin-top: 20px;
   padding: 14px 18px;
@@ -756,7 +942,6 @@ button:hover {
   color: rgba(255, 255, 255, 0.58);
 }
 
-/* Footer */
 .site-footer {
   max-width: 1100px;
   width: 100%;
@@ -782,7 +967,6 @@ button:hover {
   color: rgba(255, 255, 255, 0.62);
 }
 
-/* Animations */
 @keyframes logoPop {
   0% {
     opacity: 0;
@@ -818,7 +1002,6 @@ button:hover {
   }
 }
 
-/* Responsive */
 @media (max-width: 900px) {
   .pdf-action-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -826,6 +1009,29 @@ button:hover {
 
   .signature-top-grid {
     grid-template-columns: 1fr;
+  }
+
+  .edit-main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-side-panel {
+    position: static;
+  }
+
+  .pdf-edit-group.editor-fullscreen .edit-main-layout {
+    grid-template-columns: 1fr;
+    height: calc(100vh - 120px);
+    overflow: auto;
+  }
+
+  .pdf-edit-group.editor-fullscreen .edit-preview-shell {
+    height: calc(100vh - 260px);
+  }
+
+  .pdf-edit-group.editor-fullscreen .edit-side-panel {
+    position: static;
+    max-height: none;
   }
 }
 
@@ -936,4 +1142,260 @@ button:hover {
   .signature-empty-state {
     min-height: 230px;
   }
+}
+
+/* =========================
+   FIX: Real Fullscreen PDF Editor
+   ========================= */
+
+body.editor-fullscreen-lock {
+  overflow: hidden !important;
+}
+
+body.editor-fullscreen-lock #toolPage {
+  padding: 0 !important;
+  min-height: 100vh !important;
+  display: block !important;
+}
+
+body.editor-fullscreen-lock #toolPage > .site-header,
+body.editor-fullscreen-lock #toolPage > .back-btn,
+body.editor-fullscreen-lock #toolPage > .site-footer,
+body.editor-fullscreen-lock .tool-card > .eyebrow,
+body.editor-fullscreen-lock .tool-card > h2,
+body.editor-fullscreen-lock .tool-card > p,
+body.editor-fullscreen-lock #dropArea,
+body.editor-fullscreen-lock #pdfOptions > .pdf-action-header,
+body.editor-fullscreen-lock #pdfOptions > .pdf-action-grid,
+body.editor-fullscreen-lock #pdfPagesGroup,
+body.editor-fullscreen-lock #pdfRotationGroup,
+body.editor-fullscreen-lock #pdfPasswordGroup,
+body.editor-fullscreen-lock #pdfSignatureGroup,
+body.editor-fullscreen-lock .upload-btn,
+body.editor-fullscreen-lock .note,
+body.editor-fullscreen-lock #progressSection,
+body.editor-fullscreen-lock #previewSection,
+body.editor-fullscreen-lock #statusMessage {
+  display: none !important;
+}
+
+body.editor-fullscreen-lock .tool-card {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9998 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 12px !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+  background: rgba(35, 35, 38, 0.98) !important;
+  backdrop-filter: blur(18px);
+}
+
+body.editor-fullscreen-lock #pdfOptions {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen {
+  position: relative !important;
+  inset: auto !important;
+  z-index: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-toolbar {
+  height: auto !important;
+  min-height: 60px;
+  margin: 0 0 12px 0 !important;
+  padding: 12px !important;
+  border-radius: 18px !important;
+  background: rgba(20, 20, 22, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  position: relative !important;
+  top: auto !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-main-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 330px !important;
+  gap: 14px !important;
+  width: 100% !important;
+  height: calc(100vh - 86px) !important;
+  max-width: none !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-canvas-area {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .signature-toolbar {
+  flex: 0 0 auto !important;
+  margin: 0 0 12px 0 !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-preview-shell {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: auto !important;
+  display: block !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  justify-content: initial !important;
+  align-items: initial !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-preview-wrapper {
+  display: block !important;
+  flex: 0 0 auto !important;
+  position: relative !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-side-panel {
+  position: relative !important;
+  top: auto !important;
+  height: 100% !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-side-panel textarea {
+  min-height: 100px;
+}
+
+@media (max-width: 900px) {
+  body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-main-layout {
+    grid-template-columns: 1fr !important;
+    overflow-y: auto !important;
+  }
+
+  body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-side-panel {
+    height: auto !important;
+  }
+
+  body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-preview-shell {
+    min-height: 520px !important;
+  }
+}
+
+/* =========================
+   FINAL FIX: Fullscreen PDF internal scrolling
+   ========================= */
+
+body.editor-fullscreen-lock {
+  overflow: hidden !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-main-layout {
+  height: calc(100vh - 84px) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-canvas-area {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  overflow: hidden !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .signature-toolbar {
+  grid-row: 1 !important;
+  margin: 0 0 12px 0 !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-preview-shell {
+  grid-row: 2 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: scroll !important;
+  display: block !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  scrollbar-gutter: stable both-edges !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-x pan-y !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-preview-wrapper {
+  display: block !important;
+  position: relative !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen #pdfEditCanvas {
+  display: block !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-side-panel {
+  height: calc(100vh - 96px) !important;
+  max-height: calc(100vh - 96px) !important;
+  overflow-y: auto !important;
+}
+
+/* =========================
+   FIX: Centre PDF page in fullscreen
+   ========================= */
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-preview-wrapper.centered-page {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+body.editor-fullscreen-lock #pdfEditGroup.editor-fullscreen .edit-preview-wrapper.overflow-page {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Show current font size value */
+.edit-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.edit-field-header label {
+  margin: 0 !important;
+}
+
+.font-size-value {
+  min-width: 48px;
+  text-align: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111;
+  background: rgba(255, 255, 255, 0.9);
 }

@@ -80,7 +80,7 @@
       <div class="service-card" onclick="openTool('pdf-editor')">
         <div class="service-icon">🧩</div>
         <h3>PDF Editor Tools</h3>
-        <p>Merge, split, delete, rotate, protect, unlock, and sign PDF files.</p>
+        <p>Merge, split, delete, rotate, protect, unlock, sign, compress, and edit PDF files.</p>
       </div>
     </div>
 
@@ -168,13 +168,19 @@
             <small>Drag and place your signature freely.</small>
           </button>
 
-        <button type="button" class="pdf-action-card" data-action="compress">
-          <span class="pdf-action-icon">🗜️</span>
-          <strong>Compress PDF</strong>
-          <small>Reduce PDF file size and optimise pages.</small>
-        </button>
-       </div>
-       
+          <button type="button" class="pdf-action-card" data-action="compress">
+            <span class="pdf-action-icon">🗜️</span>
+            <strong>Compress PDF</strong>
+            <small>Reduce PDF file size and optimise pages.</small>
+          </button>
+
+          <button type="button" class="pdf-action-card" data-action="edit">
+            <span class="pdf-action-icon">✏️</span>
+            <strong>Edit PDF</strong>
+            <small>Add multiple text boxes to your PDF.</small>
+          </button>
+        </div>
+
         <div id="pdfPagesGroup" class="pdf-option-group hidden">
           <label for="pdfPages">Pages</label>
           <input type="text" id="pdfPages" placeholder="Example: 1,3,5-7" />
@@ -232,6 +238,84 @@
             <div id="signatureEmptyState" class="signature-empty-state">
               Upload a PDF and a signature image to start placing your signature.
             </div>
+          </div>
+        </div>
+
+        <div id="pdfEditGroup" class="pdf-option-group pdf-edit-group hidden">
+          <div class="edit-toolbar">
+            <div class="edit-toolbar-left">
+              <button type="button" id="addEditTextBtn" class="mini-btn">➕ Add Text</button>
+              <button type="button" id="deleteEditTextBtn" class="mini-btn danger-mini-btn">🗑 Delete Selected</button>
+              <button type="button" id="clearEditTextBtn" class="mini-btn danger-mini-btn">Clear All</button>
+            </div>
+
+            <div class="edit-toolbar-right">
+              <button type="button" id="editZoomOutBtn" class="mini-btn">−</button>
+              <span id="editZoomLabel" class="edit-zoom-label">100%</span>
+              <button type="button" id="editZoomInBtn" class="mini-btn">+</button>
+              <button type="button" id="editZoomResetBtn" class="mini-btn">Reset</button>
+              <button type="button" id="editFullscreenBtn" class="mini-btn">⛶ Full Screen</button>
+              <button type="button" id="editSaveBtn" class="mini-btn save-mini-btn">Save Edited PDF</button>
+            </div>
+          </div>
+
+          <div class="edit-main-layout">
+            <div class="edit-canvas-area">
+              <div class="signature-toolbar">
+                <button type="button" id="editPrevPage" class="mini-btn">← Previous</button>
+                <span id="editPageInfo">Upload a PDF to preview pages</span>
+                <button type="button" id="editNextPage" class="mini-btn">Next →</button>
+              </div>
+
+              <div id="editPreviewShell" class="signature-preview-shell edit-preview-shell">
+                <div id="editPreviewWrapper" class="signature-preview-wrapper edit-preview-wrapper hidden">
+                  <canvas id="pdfEditCanvas"></canvas>
+                  <div id="editLayer"></div>
+                </div>
+
+                <div id="editEmptyState" class="signature-empty-state">
+                  Upload a PDF, then click Add Text to start editing.
+                </div>
+              </div>
+            </div>
+
+            <aside class="edit-side-panel">
+              <h3>Edit Text</h3>
+              <p>Select a text box to customise it.</p>
+
+              <label for="pdfEditText">Text</label>
+              <textarea id="pdfEditText" placeholder="Type your text here..."></textarea>
+
+              <label for="pdfEditApplyMode">Apply To</label>
+              <select id="pdfEditApplyMode">
+                <option value="current">Current page only</option>
+                <option value="all">All pages</option>
+              </select>
+
+              <label for="pdfEditFontFamily">Font</label>
+              <select id="pdfEditFontFamily">
+                <option value="Helvetica">Helvetica</option>
+                <option value="Helvetica-Bold">Helvetica Bold</option>
+                <option value="Times-Roman">Times Roman</option>
+                <option value="Times-Bold">Times Bold</option>
+                <option value="Courier">Courier</option>
+                <option value="Courier-Bold">Courier Bold</option>
+              </select>
+
+             <div class="edit-field-header">
+  <label for="pdfEditFontSize">Font Size</label>
+  <span id="pdfEditFontSizeValue" class="font-size-value">22px</span>
+</div>
+
+<input type="range" id="pdfEditFontSize" min="10" max="72" value="22" />
+
+              <label for="pdfEditColour">Text Colour</label>
+              <input type="color" id="pdfEditColour" value="#000000" />
+
+              <small>
+                Add text, drag it on the preview, customise it here, then click Save Edited PDF or Upload & Process.
+              </small>
+            </aside>
           </div>
         </div>
       </div>
